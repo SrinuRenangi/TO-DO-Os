@@ -19,4 +19,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   system: {
     getSystemInfo: () => ipcRenderer.invoke('system:info'),
   },
+  runtime: {
+    getStatus: () => ipcRenderer.invoke('runtime:get-status'),
+    toggleAutoStart: () => ipcRenderer.invoke('runtime:toggle-autostart'),
+    isAutoStartEnabled: () => ipcRenderer.invoke('runtime:is-autostart-enabled'),
+    scheduleJob: (job: any) => ipcRenderer.invoke('runtime:schedule-job', job),
+    triggerNotification: (payload: any) => ipcRenderer.invoke('runtime:trigger-notification', payload),
+    reconcileMissed: () => ipcRenderer.invoke('runtime:reconcile-missed'),
+  },
+  on: (channel: string, listener: (...args: any[]) => void) => {
+    const subscription = (_event: any, ...args: any[]) => listener(...args);
+    ipcRenderer.on(channel, subscription);
+    return () => ipcRenderer.removeListener(channel, subscription);
+  },
 });
