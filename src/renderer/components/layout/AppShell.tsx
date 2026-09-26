@@ -1,20 +1,16 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  LayoutDashboard,
+  LayoutGrid,
   CheckSquare,
-  FileText,
-  Clock,
   Calendar,
   Bell,
+  FileText,
+  Timer,
   Settings,
-  Sun,
-  Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
   Search,
-  Plus,
-  ShieldCheck,
+  LogOut,
+  CalendarDays,
 } from 'lucide-react';
 import { useAppStore, MODULE_REGISTRY } from '@/stores/useAppStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -29,10 +25,6 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const {
     activeModule,
     setActiveModule,
-    sidebarCollapsed,
-    toggleSidebar,
-    theme,
-    toggleTheme,
     setCommandPaletteOpen,
     unreadNotifications,
   } = useAppStore();
@@ -40,108 +32,80 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   useKeyboardShortcuts();
 
   const iconMap: Record<string, React.ReactNode> = {
-    LayoutDashboard: <LayoutDashboard className="w-4 h-4" />,
-    CheckSquare: <CheckSquare className="w-4 h-4" />,
-    Calendar: <Calendar className="w-4 h-4" />,
-    Bell: <Bell className="w-4 h-4" />,
-    FileText: <FileText className="w-4 h-4" />,
-    Clock: <Clock className="w-4 h-4" />,
-    Settings: <Settings className="w-4 h-4" />,
+    Dashboard: <LayoutGrid className="w-5 h-5 stroke-[1.75]" />,
+    Tasks: <CheckSquare className="w-5 h-5 stroke-[1.75]" />,
+    Calendar: <Calendar className="w-5 h-5 stroke-[1.75]" />,
+    Reminders: <Bell className="w-5 h-5 stroke-[1.75]" />,
+    Notes: <FileText className="w-5 h-5 stroke-[1.75]" />,
+    Timer: <Timer className="w-5 h-5 stroke-[1.75]" />,
+    Settings: <Settings className="w-5 h-5 stroke-[1.75]" />,
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0B1220] text-[#F8FAFC]">
-      {/* 1. Linux Desktop Control Center Top Bar */}
-      <header className="h-10 flex items-center justify-between px-4 border-b border-[rgba(255,255,255,0.06)] bg-[#111827] select-none z-30">
-        {/* Left: Window Controls & OS Brand */}
+    <div className="flex flex-col h-screen w-screen overflow-hidden select-none bg-[#CFD5DE] font-sans text-slate-800">
+      {/* 1. Header (Persistent White Enterprise Bar — Image 1 reference) */}
+      <header className="h-13 flex items-center justify-between px-5 bg-white border-b border-gray-200/90 z-30 shadow-xs shrink-0">
+        {/* Left: App Logo & Brand Name */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444] shadow-sm shadow-[#EF4444]/40 cursor-pointer" />
-            <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B] shadow-sm shadow-[#F59E0B]/40 cursor-pointer" />
-            <span className="w-2.5 h-2.5 rounded-full bg-[#22C55E] shadow-sm shadow-[#22C55E]/40 cursor-pointer" />
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#3B82F6] via-[#10B981] to-[#F59E0B] p-[1.5px] shadow-sm flex items-center justify-center">
+            <div className="w-full h-full bg-white rounded-[6px] flex items-center justify-center">
+              <div className="w-4 h-3 bg-gradient-to-br from-[#2563EB] to-[#0D9488] rounded-xs shadow-inner" />
+            </div>
           </div>
-
-          <div className="flex items-center gap-2 pl-3 border-l border-[rgba(255,255,255,0.08)]">
-            <div className="w-2 h-2 rounded-full bg-[#4F8CFF] shadow-sm shadow-[#4F8CFF]" />
-            <span className="text-xs font-black tracking-widest text-[#F8FAFC]">PERSONAL OS</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#1A2333] text-[#4F8CFF] font-mono border border-[#4F8CFF]/30">
-              Desktop Native
-            </span>
-          </div>
+          <span className="font-bold text-sm tracking-tight text-slate-900">Personal Organizer</span>
         </div>
 
-        {/* Center: Omni Search & Capture (Ctrl+K) */}
-        <button
-          onClick={() => setCommandPaletteOpen(true)}
-          className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#1A2333] hover:bg-[#21293C] border border-[rgba(255,255,255,0.08)] hover:border-[#4F8CFF]/40 text-xs text-[#94A3B8] transition-all"
-        >
-          <Search className="w-3.5 h-3.5 text-[#4F8CFF]" />
-          <span>Quick Command Bar...</span>
-          <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.06)] text-[#64748B] font-mono font-bold border border-[rgba(255,255,255,0.08)]">
-            Ctrl+K
-          </kbd>
-        </button>
-
-        {/* Right: Telemetry, Notification Bell & Theme Switcher */}
-        <div className="flex items-center gap-2.5">
-          {/* Live System Companion badge */}
-          <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#1A2333] border border-[rgba(255,255,255,0.06)] text-[11px] text-[#94A3B8]">
-            <span className="text-[#4F8CFF] font-semibold">Offline SQLite</span>
-            <span className="text-[#64748B]">•</span>
-            <span className="text-[#22C55E] font-semibold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
-              24/7 Tray Active
-            </span>
-          </div>
-
-          {/* Reminders Shortcut */}
+        {/* Center: Search Bar */}
+        <div className="relative">
           <button
+            onClick={() => setCommandPaletteOpen(true)}
+            className="flex items-center gap-2.5 px-4 py-1.5 w-80 md:w-96 rounded-full bg-[#F3F4F6] hover:bg-[#E5E7EB] border border-gray-200/80 text-xs text-slate-500 transition-colors"
+          >
+            <Search className="w-3.5 h-3.5 text-slate-400" />
+            <span className="flex-1 text-left">Search</span>
+            <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-white text-slate-400 font-mono shadow-xs border border-gray-200">
+              Ctrl+K
+            </kbd>
+          </button>
+        </div>
+
+        {/* Right: Actions (Calendar, Notifications, User Profile) */}
+        <div className="flex items-center gap-3.5">
+          <motion.button
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
+            onClick={() => setActiveModule('calendar')}
+            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            title="Open Calendar"
+          >
+            <CalendarDays className="w-4 h-4 stroke-[1.8]" />
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
             onClick={() => setActiveModule('reminders')}
-            className="p-1.5 rounded-xl text-[#94A3B8] hover:text-[#4F8CFF] hover:bg-[#1A2333] relative transition-colors"
-            title="Reminders & Notifications"
+            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors relative"
+            title="Notifications & Reminders"
           >
-            <Bell className="w-4 h-4" />
-            {unreadNotifications > 0 && (
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#EF4444] animate-pulse" />
-            )}
-          </button>
+            <Bell className="w-4 h-4 stroke-[1.8]" />
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 border border-white" />
+          </motion.button>
 
-          <button
-            onClick={toggleTheme}
-            className="p-1.5 rounded-xl text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#1A2333] transition-colors"
-            title="Toggle Theme"
-          >
-            {theme === 'dark' ? <Sun className="w-4 h-4 text-[#F59E0B]" /> : <Moon className="w-4 h-4 text-[#4F8CFF]" />}
-          </button>
+          {/* User Profile Avatar */}
+          <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-200 to-amber-400 border border-amber-300 shadow-xs flex items-center justify-center overflow-hidden">
+              <span className="text-[11px] font-bold text-amber-900">SO</span>
+            </div>
+          </div>
         </div>
       </header>
 
-      {/* 2. Main Body: Linux Desktop Sidebar + Canvas */}
+      {/* 2. Main Viewport: Vertical Sidebar + Brushed Metal Studio Canvas */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <motion.aside
-          animate={{ width: sidebarCollapsed ? 68 : 240 }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col border-r border-[rgba(255,255,255,0.06)] bg-[#111827] select-none z-20"
-        >
-          {/* Sidebar Top */}
-          <div className="p-3 flex items-center justify-between border-b border-[rgba(255,255,255,0.06)]">
-            {!sidebarCollapsed && (
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#64748B]">
-                Productivity Suite
-              </span>
-            )}
-            <button
-              onClick={toggleSidebar}
-              className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#4F8CFF] hover:bg-[#1A2333] transition-colors ml-auto"
-              title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-            >
-              {sidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-            </button>
-          </div>
-
-          {/* Module Nav Links */}
-          <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+        {/* Sidebar (Minimal Left Vertical Bar ~72px) */}
+        <aside className="w-[72px] bg-[#ECEEF2] border-r border-slate-300/80 flex flex-col items-center py-3.5 shrink-0 z-20">
+          <nav className="flex-1 space-y-3 w-full px-2">
             {MODULE_REGISTRY.map((mod) => {
               const isActive = activeModule === mod.id;
               return (
@@ -149,58 +113,37 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   key={mod.id}
                   onClick={() => setActiveModule(mod.id)}
                   title={mod.name}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all relative ${
+                  className={`w-full flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all ${
                     isActive
-                      ? 'bg-[#4F8CFF] text-white shadow-md shadow-[#4F8CFF]/30 font-bold'
-                      : 'text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#1A2333]'
+                      ? 'bg-white shadow-sm text-slate-900 font-bold border border-slate-300/60'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-black/5 font-medium'
                   }`}
                 >
-                  <span className={`p-1 rounded-lg ${isActive ? 'text-white' : 'text-[#64748B]'}`}>
-                    {iconMap[mod.iconName] || <LayoutDashboard className="w-4 h-4" />}
-                  </span>
-
-                  {!sidebarCollapsed && (
-                    <div className="flex-1 flex items-center justify-between">
-                      <span className="truncate">{mod.name}</span>
-                      {mod.hotkey && (
-                        <kbd
-                          className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
-                            isActive
-                              ? 'bg-black/20 text-white font-bold'
-                              : 'bg-[#1A2333] text-[#64748B] border border-[rgba(255,255,255,0.06)]'
-                          }`}
-                        >
-                          {mod.hotkey}
-                        </kbd>
-                      )}
-                    </div>
-                  )}
+                  <div className={`p-1 rounded-lg ${isActive ? 'text-blue-600' : 'text-slate-600'}`}>
+                    {iconMap[mod.name] || <LayoutGrid className="w-5 h-5 stroke-[1.75]" />}
+                  </div>
+                  <span className="text-[10px] tracking-tight mt-0.5">{mod.name}</span>
                 </button>
               );
             })}
           </nav>
 
-          {/* Sidebar Footer: 24/7 Companion Badge */}
-          <div className="p-3 border-t border-[rgba(255,255,255,0.06)] bg-[#0B1220]">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[#4F8CFF]/20 text-[#4F8CFF] border border-[#4F8CFF]/30 flex items-center justify-center text-xs font-black shadow-sm">
-                OS
-              </div>
-              {!sidebarCollapsed && (
-                <div className="flex-1 overflow-hidden">
-                  <div className="text-xs font-bold text-[#F8FAFC] truncate">Personal OS</div>
-                  <div className="text-[10px] text-[#22C55E] flex items-center gap-1 font-semibold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
-                    <span>24/7 Companion Active</span>
-                  </div>
-                </div>
-              )}
-            </div>
+          {/* Sidebar Footer Readouts */}
+          <div className="w-full px-2 pt-3 border-t border-slate-300/70 text-center space-y-1">
+            <div className="text-[9px] font-mono text-slate-500 font-semibold leading-tight">Data: 10%</div>
+            <div className="text-[9px] font-mono text-slate-500 font-semibold leading-tight">Data: 22:08</div>
+            <button
+              onClick={() => setActiveModule('settings')}
+              className="mt-1 p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-black/5 transition-colors"
+              title="System Exit / Settings"
+            >
+              <LogOut className="w-3.5 h-3.5 mx-auto rotate-180" />
+            </button>
           </div>
-        </motion.aside>
+        </aside>
 
-        {/* Viewport Canvas */}
-        <main className="flex-1 overflow-y-auto bg-[#0B1220]">
+        {/* Brushed Metal Canvas Workspace */}
+        <main className="flex-1 overflow-y-auto brushed-metal-canvas p-6 md:p-8">
           {children}
         </main>
       </div>

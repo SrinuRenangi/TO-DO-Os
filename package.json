@@ -2,12 +2,13 @@
   "name": "to-do",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "electron-main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "echo \"Tests pending\""
+    "desktop": "electron electron-main.cjs",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",

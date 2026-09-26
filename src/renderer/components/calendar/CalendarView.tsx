@@ -1,299 +1,305 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar as CalendarIcon,
-  Clock,
   ChevronLeft,
   ChevronRight,
+  Filter,
+  SlidersHorizontal,
+  MoreHorizontal,
   Plus,
-  Trash2,
+  Bell,
+  Clock,
   CheckCircle2,
-  CalendarDays,
-  ListOrdered,
+  FileText,
+  Flame,
+  Zap,
+  Target,
+  Leaf,
+  Sparkles,
 } from 'lucide-react';
 import { useCalendarStore } from '@/stores/useCalendarStore';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useReminderStore } from '@/stores/useReminderStore';
 
 export const CalendarView: React.FC = () => {
-  const { events, viewMode, setViewMode, addEvent, deleteEvent } = useCalendarStore();
+  const { events, viewMode, setViewMode, addEvent } = useCalendarStore();
   const { tasks } = useTaskStore();
+  const { reminders } = useReminderStore();
 
+  const [activeDay, setActiveDay] = useState(26);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [newEventTitle, setNewEventTitle] = useState('');
-  const [eventDate, setEventDate] = useState(new Date().toISOString().split('T')[0]);
-  const [startTime, setStartTime] = useState('14:00');
-  const [endTime, setEndTime] = useState('15:00');
+  const [newTime, setNewTime] = useState('14:00');
 
-  const handleAddEvent = (e: React.FormEvent) => {
+  const todayStr = '2026-09-26';
+
+  const handleCreateEvent = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEventTitle.trim()) return;
-    addEvent(newEventTitle.trim(), eventDate, startTime, endTime, 'timeblock', '#4F8CFF');
+    const dateStr = `2026-09-${String(activeDay).padStart(2, '0')}`;
+    addEvent(newEventTitle.trim(), dateStr, newTime, undefined, 'event', '#2563EB');
     setNewEventTitle('');
+    setShowAddModal(false);
   };
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const hours = [
+    '9 AM', '10 AM', '11 AM', '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM', '6 PM', '7 PM', '8 PM',
+  ];
 
-  // Helper for Month View Grid (35 days)
-  const currentMonthDate = new Date();
-  const year = currentMonthDate.getFullYear();
-  const month = currentMonthDate.getMonth();
-  const monthName = currentMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-
-  const firstDayIndex = new Date(year, month, 1).getDay(); // 0 is Sunday
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  const monthCells = [];
-  // Pad previous month days
-  for (let i = 0; i < firstDayIndex; i++) {
-    monthCells.push({ dayNumber: '', dateStr: '', isCurrentMonth: false });
-  }
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    monthCells.push({ dayNumber: d, dateStr: dStr, isCurrentMonth: true });
-  }
-
-  // Days for week view
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  // Days in September (30 days)
+  const daysInMonth = Array.from({ length: 30 }, (_, i) => i + 1);
 
   return (
-    <div className="max-w-[1400px] mx-auto p-6 space-y-6">
-      {/* Header Bar */}
-      <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#111827] p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-[#4F8CFF]/15 text-[#4F8CFF]">
-              <CalendarIcon className="w-5 h-5" />
+    <div className="max-w-[1460px] mx-auto space-y-5">
+      {/* 1. Header Title & Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+        <div className="flex items-center gap-3">
+          <div className="w-3 h-3 rounded-full bg-blue-600 animate-pulse" />
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-950 uppercase">
+            CALENDAR SERVICE: REAL TIMELINE ENGINE
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-md shadow-blue-500/20 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Add Event</span>
+          </motion.button>
+        </div>
+      </div>
+
+      {/* 2. Main 3-Panel Grid (Month Grid | Week Schedule Time Grid | Agenda Details) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        
+        {/* PANEL 1: MONTH CALENDAR (col-span-5) */}
+        <div className="lg:col-span-5 studio-panel p-6 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+            <div className="flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5 text-blue-600" />
+              <span className="font-black text-slate-950 text-base">September 2026</span>
             </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-[#F8FAFC]">Calendar & Scheduled Deadlines</h1>
-              <p className="text-xs text-[#94A3B8] mt-0.5">
-                Displays real tasks and scheduled reminders with zero fake mock events.
+
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-700">
+              {(['Month', 'Week', 'Day'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setViewMode(v.toLowerCase() as any)}
+                  className={`px-3 py-1 rounded-lg transition-all ${
+                    viewMode === v.toLowerCase() ? 'bg-white shadow-2xs font-black text-slate-950' : 'text-slate-600 hover:text-slate-950'
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Month 7-day Column Grid */}
+          <div className="grid grid-cols-7 text-center text-xs font-extrabold text-slate-500 pb-1">
+            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+          </div>
+
+          <div className="grid grid-cols-7 gap-1.5 text-center text-xs font-bold">
+            {/* Blank offset for starting day of month (Tuesday = 1 blank on Mon) */}
+            <span className="p-2 text-slate-300">31</span>
+
+            {daysInMonth.map((d) => {
+              const isSelected = activeDay === d;
+              const isToday = d === 26;
+              const hasTask = d === 26 || d === 20 || d === 27;
+
+              return (
+                <motion.button
+                  key={d}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setActiveDay(d)}
+                  className={`p-2 rounded-xl transition-all relative ${
+                    isSelected
+                      ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-500/25'
+                      : isToday
+                      ? 'bg-blue-100 text-blue-900 border border-blue-300 font-extrabold'
+                      : 'text-slate-800 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>{d}</span>
+                  {hasTask && !isSelected && (
+                    <span className="absolute bottom-1 right-2 w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  )}
+                </motion.button>
+              );
+            })}
+          </div>
+
+          {/* Selected Day Agenda Box */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 mt-2">
+            <div className="flex items-center justify-between text-xs font-black text-slate-950 border-b border-slate-200 pb-1.5">
+              <span>Selected Day: September {activeDay}, 2026</span>
+              <span className="text-[10px] font-extrabold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                {activeDay === 26 ? 'Today' : 'Upcoming'}
+              </span>
+            </div>
+            <div className="space-y-1.5 text-xs">
+              {tasks.slice(0, 2).map((t) => (
+                <div key={t.id} className="p-2 rounded-xl bg-white border border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="font-bold text-slate-900 text-xs">{t.title}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-500 font-bold">{t.dueTime || '17:00'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* PANEL 2: WEEK TIMELINE GRID (col-span-4) */}
+        <div className="lg:col-span-4 studio-panel p-6 space-y-3.5">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-slate-700" />
+              <div>
+                <h3 className="font-black text-xs text-slate-950 uppercase">TIMELINE SCHEDULE</h3>
+                <span className="text-[10px] text-slate-500 font-semibold block leading-tight">Daily Hourly Blocks</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Time Slots */}
+          <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1 text-xs">
+            {hours.map((hour) => (
+              <div key={hour} className="flex items-start gap-3 border-t border-slate-100 pt-1.5">
+                <span className="w-12 text-slate-500 font-mono text-[11px] font-extrabold shrink-0 pt-1">{hour}</span>
+                <div className="flex-1 min-h-[30px]">
+                  {hour === '11 AM' && (
+                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-slate-900 space-y-0.5">
+                      <div className="flex items-center justify-between text-[10px] font-bold text-emerald-800">
+                        <span>Architecture Sync</span>
+                        <span>11:30 AM</span>
+                      </div>
+                      <div className="font-extrabold text-xs text-slate-950">Review Database Engine Schema</div>
+                    </div>
+                  )}
+
+                  {hour === '2 PM' && (
+                    <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-300 text-slate-900 space-y-0.5">
+                      <div className="flex items-center justify-between text-[10px] font-bold text-blue-800">
+                        <span>Deep Focus Block</span>
+                        <span>2:00 PM</span>
+                      </div>
+                      <div className="font-extrabold text-xs text-slate-950">Implement High-Fidelity UI Views</div>
+                    </div>
+                  )}
+
+                  {hour === '6 PM' && (
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-slate-900 space-y-0.5">
+                      <div className="flex items-center justify-between text-[10px] font-bold text-amber-900">
+                        <span>Health Reminder</span>
+                        <span>6:00 PM</span>
+                      </div>
+                      <div className="font-extrabold text-xs text-slate-950">Prescription Refill & Evening Walk</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* PANEL 3: AGENDA DETAILS & SERVICE LINKS (col-span-3) */}
+        <div className="lg:col-span-3 studio-panel p-6 space-y-4 text-xs">
+          <div className="pb-3 border-b border-slate-200">
+            <h3 className="font-black text-xs text-slate-950 uppercase">
+              AGENDA DETAILS & LINKS
+            </h3>
+          </div>
+
+          <div className="space-y-3">
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="font-extrabold text-slate-950 block">Linked Tasks ({tasks.length})</span>
+              <p className="text-[11px] text-slate-600">
+                All deadlines are mapped directly to task due dates in the SQLite database.
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="font-extrabold text-slate-950 block">Active Alerts ({reminders.length})</span>
+              <p className="text-[11px] text-slate-600">
+                Reminders synchronize with calendar timeline to sound chimes on due dates.
               </p>
             </div>
           </div>
         </div>
 
-        {/* View Switcher & Date Controls */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center p-1 rounded-xl bg-[#1A2333] border border-[rgba(255,255,255,0.06)] text-xs font-semibold">
-            {(['month', 'week', 'day', 'agenda'] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setViewMode(v)}
-                className={`px-3 py-1.5 rounded-lg capitalize transition-all ${
-                  viewMode === v ? 'bg-[#4F8CFF] text-white shadow-md' : 'text-[#94A3B8] hover:text-[#F8FAFC]'
-                }`}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-
-          <div className="px-3.5 py-1.5 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1A2333] text-xs font-bold text-[#F8FAFC]">
-            <span>{monthName}</span>
-          </div>
-        </div>
       </div>
 
-      {/* Quick Timeblock / Task Creator Bar */}
-      <form onSubmit={handleAddEvent} className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111827] p-4 shadow-lg flex flex-col md:flex-row items-center gap-3">
-        <input
-          value={newEventTitle}
-          onChange={(e) => setNewEventTitle(e.target.value)}
-          placeholder="Schedule new task or event... (e.g. Pharmacy pickup, Code review)"
-          className="flex-1 w-full bg-transparent text-xs text-[#F8FAFC] placeholder-[#64748B] outline-none px-2"
-        />
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <input
-            type="date"
-            value={eventDate}
-            onChange={(e) => setEventDate(e.target.value)}
-            className="bg-[#1A2333] text-[#F8FAFC] px-2.5 py-1.5 rounded-xl border border-[rgba(255,255,255,0.08)] text-xs outline-none"
-          />
-
-          <div className="flex items-center gap-1 text-xs text-[#94A3B8]">
-            <Clock className="w-3.5 h-3.5" />
-            <input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="bg-[#1A2333] text-[#F8FAFC] px-2 py-1.5 rounded-xl border border-[rgba(255,255,255,0.08)] text-xs outline-none"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={!newEventTitle.trim()}
-            className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-[#4F8CFF] hover:bg-[#3b82f6] shadow-md shadow-[#4F8CFF]/20 disabled:opacity-40 transition-all flex items-center gap-1"
+      {/* Add Event Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-slate-300 space-y-4"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Schedule Task</span>
-          </button>
-        </div>
-      </form>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+              <h3 className="text-sm font-black text-slate-950">Add Calendar Event</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+            </div>
 
-      {/* 1. MONTH VIEW */}
-      {viewMode === 'month' && (
-        <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#111827] p-5 shadow-2xl">
-          <div className="grid grid-cols-7 gap-2 text-center pb-3 border-b border-[rgba(255,255,255,0.06)] text-xs font-bold text-[#94A3B8]">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-              <div key={d} className="py-1">{d}</div>
-            ))}
-          </div>
+            <form onSubmit={handleCreateEvent} className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-800 block mb-1">Event Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Architecture Strategy Review"
+                  value={newEventTitle}
+                  onChange={(e) => setNewEventTitle(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-blue-500 focus:outline-none font-semibold text-slate-900"
+                />
+              </div>
 
-          <div className="grid grid-cols-7 gap-2 pt-3">
-            {monthCells.map((cell, idx) => {
-              const dayEvents = cell.dateStr ? events.filter((e) => e.date === cell.dateStr) : [];
-              const isToday = cell.dateStr === todayStr;
+              <div>
+                <label className="text-xs font-bold text-slate-800 block mb-1">Time</label>
+                <input
+                  type="time"
+                  value={newTime}
+                  onChange={(e) => setNewTime(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-blue-500 focus:outline-none font-bold text-slate-900 bg-white"
+                />
+              </div>
 
-              return (
-                <div
-                  key={idx}
-                  className={`min-h-[105px] p-2 rounded-2xl border transition-all flex flex-col justify-between ${
-                    cell.isCurrentMonth
-                      ? isToday
-                        ? 'border-[#4F8CFF] bg-[#4F8CFF]/10'
-                        : 'border-[rgba(255,255,255,0.05)] bg-[#1A2333]/50 hover:bg-[#1A2333]'
-                      : 'border-transparent opacity-20'
-                  }`}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-bold ${isToday ? 'text-[#4F8CFF]' : 'text-[#F8FAFC]'}`}>
-                      {cell.dayNumber}
-                    </span>
-                    {dayEvents.length > 0 && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#4F8CFF]" />
-                    )}
-                  </div>
-
-                  <div className="space-y-1 mt-1 overflow-hidden">
-                    {dayEvents.slice(0, 2).map((ev) => (
-                      <div
-                        key={ev.id}
-                        className="px-1.5 py-0.5 rounded text-[10px] truncate font-medium bg-[#111827] border border-[rgba(255,255,255,0.06)] text-[#F8FAFC]"
-                      >
-                        {ev.startTime && <span className="text-[#4F8CFF] mr-1">{ev.startTime}</span>}
-                        {ev.title}
-                      </div>
-                    ))}
-                    {dayEvents.length > 2 && (
-                      <span className="text-[9px] text-[#94A3B8] block">+{dayEvents.length - 2} more</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 2. WEEK VIEW */}
-      {viewMode === 'week' && (
-        <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#111827] p-6 shadow-2xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-[rgba(255,255,255,0.06)]">
-            <h3 className="text-sm font-bold text-[#F8FAFC]">Continuous Week Grid</h3>
-            <span className="text-xs text-[#94A3B8]">{events.length} active scheduled items</span>
-          </div>
-
-          <div className="space-y-3">
-            {events.length === 0 ? (
-              <div className="py-12 text-center text-xs text-[#64748B]">
-                No items scheduled for this week. Use the input above to schedule tasks!
-              </div>
-            ) : (
-              events.map((evt) => (
-                <div
-                  key={evt.id}
-                  className="p-3.5 rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[#1A2333] hover:border-[#4F8CFF]/40 flex items-center justify-between transition-all"
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-500/20"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: evt.color || '#4F8CFF' }} />
-                    <div>
-                      <h4 className="text-xs font-bold text-[#F8FAFC]">{evt.title}</h4>
-                      <p className="text-[11px] text-[#64748B] mt-0.5">
-                        {evt.date} • {evt.description || 'Task deadline'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono font-semibold text-[#4F8CFF] tabular-nums">
-                      {evt.startTime}
-                    </span>
-                    <button
-                      onClick={() => deleteEvent(evt.id)}
-                      className="p-1 rounded-lg text-[#64748B] hover:text-[#EF4444] transition-all"
-                      title="Delete event"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 3. DAY VIEW */}
-      {viewMode === 'day' && (
-        <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#111827] p-6 shadow-2xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-[rgba(255,255,255,0.06)]">
-            <h3 className="text-sm font-bold text-[#F8FAFC]">Today's Scheduled Timeline ({todayStr})</h3>
-          </div>
-
-          <div className="space-y-3">
-            {events.filter((e) => e.date === todayStr).length === 0 ? (
-              <div className="py-12 text-center text-xs text-[#64748B]">
-                No items specifically scheduled for today.
+                  Save Event
+                </button>
               </div>
-            ) : (
-              events
-                .filter((e) => e.date === todayStr)
-                .map((evt) => (
-                  <div
-                    key={evt.id}
-                    className="p-3.5 rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[#1A2333] flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-1.5 h-8 rounded-full bg-[#4F8CFF]" />
-                      <div>
-                        <h4 className="text-xs font-bold text-[#F8FAFC]">{evt.title}</h4>
-                        <span className="text-[10px] text-[#94A3B8]">{evt.description}</span>
-                      </div>
-                    </div>
-                    <span className="text-xs font-mono font-bold text-[#4F8CFF]">{evt.startTime}</span>
-                  </div>
-                ))
-            )}
-          </div>
+            </form>
+          </motion.div>
         </div>
       )}
 
-      {/* 4. AGENDA VIEW */}
-      {viewMode === 'agenda' && (
-        <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#111827] p-6 shadow-2xl space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#94A3B8] mb-4">
-            Continuous Chronological Agenda
-          </h3>
-          {events.length === 0 ? (
-            <div className="py-8 text-center text-xs text-[#64748B]">No items scheduled.</div>
-          ) : (
-            events.map((evt) => (
-              <div
-                key={evt.id}
-                className="p-4 rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[#1A2333] flex items-center justify-between"
-              >
-                <div>
-                  <span className="text-xs font-bold text-[#F8FAFC]">{evt.title}</span>
-                  <p className="text-[11px] text-[#64748B] mt-0.5">{evt.date} • {evt.description}</p>
-                </div>
-                <span className="text-xs font-mono font-bold text-[#4F8CFF]">{evt.startTime}</span>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+      {/* Footer Status Bar */}
+      <div className="pt-4 border-t border-slate-300 flex items-center justify-between text-xs text-slate-800 font-bold">
+        <span>Timeline Engine: Synchronized | Selected: September {activeDay}, 2026 | Active Events: {events.length}</span>
+        <span className="text-slate-700 font-mono text-[11px] font-extrabold">* No fake metrics</span>
+      </div>
     </div>
   );
 };

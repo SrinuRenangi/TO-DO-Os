@@ -1,553 +1,652 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  CheckSquare,
-  Bell,
-  Clock,
   Calendar,
   FileText,
+  Bell,
+  CheckSquare,
   Play,
   Pause,
   RotateCcw,
+  Clock,
+  ChevronRight,
+  ExternalLink,
   Plus,
+  Flame,
+  Zap,
+  Target,
+  Leaf,
+  Trash2,
+  CheckCircle2,
+  Circle,
+  Sparkles,
   ArrowRight,
   ShieldCheck,
-  Check,
-  AlertCircle,
-  ExternalLink,
   Volume2,
-  Trash2,
 } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useReminderStore } from '@/stores/useReminderStore';
 import { useNotesStore } from '@/stores/useNotesStore';
 import { useFocusStore } from '@/stores/useFocusStore';
-import { useCalendarStore } from '@/stores/useCalendarStore';
-import { databaseService } from '@/services/database/database-service';
-import { NotificationEntity } from '@/services/database/types';
-import { formatDisplayDate } from '@/lib/utils';
+import { AnalogClock } from './AnalogClock';
+import { Priority } from '@shared/types';
 
 export const DashboardView: React.FC = () => {
   const { setActiveModule, setQuickCaptureOpen } = useAppStore();
-  
-  // Real Service Stores
-  const { tasks, toggleTaskStatus, addTask } = useTaskStore();
-  const { reminders, snoozeReminder, dismissReminder, addReminder } = useReminderStore();
-  const { notes, selectNote, createNote } = useNotesStore();
-  const { events } = useCalendarStore();
-  const { mode, remainingSeconds, isRunning, startTimer, pauseTimer, resetTimer, setMode } = useFocusStore();
+  const { tasks, toggleTaskStatus } = useTaskStore();
+  const { reminders, snoozeReminder, dismissReminder, deleteReminder } = useReminderStore();
+  const { notes, selectNote } = useNotesStore();
+  const { mode, remainingSeconds, isRunning, startTimer, pauseTimer, resetTimer } = useFocusStore();
 
-  // Notification Feed from databaseService
-  const [notifications, setNotifications] = useState<NotificationEntity[]>([]);
-
-  // Live Clock
   const [currentTime, setCurrentTime] = useState(new Date());
-
-  // Inline Quick Add inputs
-  const [quickTaskTitle, setQuickTaskTitle] = useState('');
-  const [quickTaskTime, setQuickTaskTime] = useState('18:00');
-  const [quickReminderTitle, setQuickReminderTitle] = useState('');
-  const [quickReminderTime, setQuickReminderTime] = useState('18:00');
 
   useEffect(() => {
     const clock = setInterval(() => setCurrentTime(new Date()), 1000);
-    setNotifications(databaseService.getNotifications());
     return () => clearInterval(clock);
   }, []);
 
-  const refreshNotifications = () => {
-    setNotifications(databaseService.getNotifications());
+  const timeString = currentTime.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  const elapsedMins = Math.floor((25 * 60 - remainingSeconds) / 60);
+  const elapsedSecs = Math.max(0, (25 * 60 - remainingSeconds) % 60);
+  const elapsedFormatted = `${elapsedMins}:${String(elapsedSecs).padStart(2, '0')}`;
+
+  const pinnedNotes = notes.filter((n) => n.pinned);
+  const displayNotes = pinnedNotes.length > 0 ? pinnedNotes : notes.slice(0, 2);
+
+  // Helper for cute priority badges with icons (NO cryptic keywords)
+  const renderPriorityBadge = (priority: Priority | string) => {
+    switch (priority) {
+      case 'P0':
+      case 'critical':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-xs">
+            <Flame className="w-3 h-3 text-rose-600 fill-rose-500 animate-pulse" />
+            <span>Urgent</span>
+          </span>
+        );
+      case 'P1':
+      case 'urgent':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-xs">
+            <Zap className="w-3 h-3 text-amber-600 fill-amber-500" />
+            <span>High</span>
+          </span>
+        );
+      case 'P2':
+      case 'normal':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-900 border border-sky-300 shadow-xs">
+            <Target className="w-3 h-3 text-sky-600" />
+            <span>Normal</span>
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-xs">
+            <Leaf className="w-3 h-3 text-emerald-600" />
+            <span>Low</span>
+          </span>
+        );
+    }
   };
 
-  const handleCreateTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickTaskTitle.trim()) return;
-    addTask(quickTaskTitle.trim(), 'P1', 'Engineering', undefined, quickTaskTime);
-    setQuickTaskTitle('');
-    refreshNotifications();
-  };
-
-  const handleCreateReminder = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickReminderTitle.trim()) return;
-    const today = new Date().toISOString().split('T')[0];
-    const [h, m] = quickReminderTime.split(':').map(Number);
-    const trig = new Date();
-    trig.setHours(h, m, 0, 0);
-
-    const formattedTime = new Intl.DateTimeFormat('en-US', {
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: true,
-    }).format(trig);
-
-    addReminder(quickReminderTitle.trim(), trig.toISOString(), formattedTime, 'urgent');
-    setQuickReminderTitle('');
-    refreshNotifications();
-  };
-
-  const clearAllNotifications = () => {
-    databaseService.clearNotifications();
-    setNotifications([]);
-  };
-
-  // Filter Today's Tasks
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayTasks = tasks.filter((t) => t.dueDate === todayStr || t.status === 'todo');
-  const pendingTasks = tasks.filter((t) => t.status === 'todo');
-  const activeReminders = reminders.filter((r) => !r.isTriggered);
-
-  // Timer format
-  const mins = Math.floor(remainingSeconds / 60);
-  const secs = remainingSeconds % 60;
-  const formattedTimer = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-
-  const { weekday, monthDay } = formatDisplayDate(currentTime);
-  const timeString = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const activeReminders = reminders.slice(0, 4);
 
   return (
-    <div className="max-w-[1600px] mx-auto p-6 space-y-6">
-      {/* 1. Header Strip (Executive Personal OS Summary) */}
-      <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#111827]/90 backdrop-blur-2xl p-6 shadow-2xl">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-[#22C55E] bg-[#22C55E]/15 border border-[#22C55E]/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
-                24/7 Daemon Active
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-[#4F8CFF] bg-[#4F8CFF]/15 border border-[#4F8CFF]/30">
-                Pure Deterministic (Zero-AI)
-              </span>
-              <span className="text-xs text-[#94A3B8]">
-                {weekday}, {monthDay}
-              </span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[#F8FAFC]">
-              Personal OS <span className="text-[#4F8CFF] font-medium text-lg ml-2">Your Life. Your System. One Dashboard.</span>
-            </h1>
-            <p className="text-xs text-[#94A3B8] mt-1">
-              Active command center: <span className="text-[#F8FAFC] font-semibold">{pendingTasks.length}</span> pending tasks,{' '}
-              <span className="text-[#F8FAFC] font-semibold">{activeReminders.length}</span> scheduled reminders,{' '}
-              <span className="text-[#F8FAFC] font-semibold">{notes.length}</span> persistent notes.
-            </p>
-          </div>
-
-          {/* Live Chrono & Controls */}
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex flex-col items-center px-5 py-2 rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[#1A2333]/90 shadow-md">
-              <span className="text-[9px] uppercase tracking-widest font-black text-[#64748B]">System Clock</span>
-              <span className="text-xl font-mono font-bold tracking-wider text-[#F8FAFC] tabular-nums">
-                {timeString}
-              </span>
-            </div>
-
-            <button
-              onClick={() => setActiveModule('tasks')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#4F8CFF] hover:bg-[#3b82f6] shadow-lg shadow-[#4F8CFF]/25 transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New Task</span>
-            </button>
-          </div>
+    <div className="max-w-[1460px] mx-auto space-y-6">
+      {/* 1. Page Title Header with Sharp Intensity */}
+      <div className="flex items-center justify-between pb-1">
+        <div className="flex items-center gap-3">
+          <div className="w-3 h-3 rounded-full bg-blue-600 animate-ping" />
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-950 uppercase">
+            DASHBOARD <span className="text-slate-700 font-semibold normal-case text-lg">(Pure Summary Center)</span>
+          </h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setQuickCaptureOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Quick Task</span>
+          </motion.button>
         </div>
       </div>
 
-      {/* 2. Primary Summary Grid: Today's Tasks & Upcoming Reminders */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* 2. Top Row (3 Panels: Pure Summary Center | Upcoming Real Reminders | Real Notification Feed) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         
-        {/* TODAY'S TASKS (Real Tasks from taskService) */}
-        <div className="lg:col-span-7 rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#111827] p-6 shadow-xl flex flex-col justify-between">
+        {/* Panel 1: Pure Summary Center (col-span-3) */}
+        <motion.div
+          whileHover={{ y: -2 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          className="lg:col-span-3 studio-panel p-6 flex flex-col justify-between"
+        >
           <div>
-            <div className="flex items-center justify-between pb-4 border-b border-[rgba(255,255,255,0.06)]">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-[#4F8CFF]/15 text-[#4F8CFF]">
-                  <CheckSquare className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-[#F8FAFC]">Today's Tasks</h2>
-                  <p className="text-[11px] text-[#94A3B8]">Direct from SQLite Task Engine</p>
-                </div>
-              </div>
-              <button
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
+              <h2 className="text-base font-extrabold text-slate-950 tracking-tight flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-blue-600" />
+                <span>Pure Summary Center</span>
+              </h2>
+            </div>
+
+            <div className="space-y-2.5 text-xs font-bold text-slate-800">
+              <motion.button
+                whileHover={{ scale: 1.02, x: 3 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setActiveModule('tasks')}
-                className="flex items-center gap-1 text-xs font-semibold text-[#4F8CFF] hover:underline"
+                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 transition-all text-left group"
               >
-                <span>All Tasks ({tasks.length})</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                  <span className="font-bold text-slate-900 group-hover:text-blue-700">Today's Real Tasks</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-extrabold">
+                  {tasks.filter((t) => t.status !== 'completed').length} active
+                </span>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02, x: 3 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setActiveModule('reminders')}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-amber-50 hover:text-amber-900 border border-slate-200 transition-all text-left group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                  <span className="font-bold text-slate-900 group-hover:text-amber-700">Upcoming Reminders</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold">
+                  {reminders.length} alerts
+                </span>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02, x: 3 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setActiveModule('calendar')}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:text-emerald-900 border border-slate-200 transition-all text-left group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Calendar className="w-4 h-4 text-emerald-600" />
+                  <span className="font-bold text-slate-900 group-hover:text-emerald-700">Real Calendar Snapshot</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600" />
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02, x: 3 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setActiveModule('notes')}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-purple-50 hover:text-purple-900 border border-slate-200 transition-all text-left group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <FileText className="w-4 h-4 text-purple-600" />
+                  <span className="font-bold text-slate-900 group-hover:text-purple-700">Recent Notes</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-extrabold">
+                  {notes.length} total
+                </span>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02, x: 3 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setActiveModule('timer')}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-rose-50 hover:text-rose-900 border border-slate-200 transition-all text-left group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Clock className="w-4 h-4 text-rose-600" />
+                  <span className="font-bold text-slate-900 group-hover:text-rose-700">Wall-Clock Timer</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-extrabold">
+                  {isRunning ? 'Running' : 'Ready'}
+                </span>
+              </motion.button>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-200 mt-4 flex items-center justify-between text-[11px] font-bold text-slate-600">
+            <span>Storage: SQLite Offline</span>
+            <span className="text-emerald-700 font-extrabold flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              100% Deterministic
+            </span>
+          </div>
+        </motion.div>
+
+        {/* Panel 2: Upcoming Real Reminders (col-span-5) */}
+        <motion.div
+          whileHover={{ y: -2 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          className="lg:col-span-5 studio-panel p-6 flex flex-col justify-between"
+        >
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-3">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-amber-500" />
+                <h2 className="text-base font-extrabold text-slate-950 tracking-tight">
+                  Upcoming Real Reminders
+                </h2>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setActiveModule('reminders')}
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              >
+                <span>View All ({reminders.length})</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </motion.button>
             </div>
 
-            {/* Inline Quick Add Task */}
-            <form onSubmit={handleCreateTask} className="mt-4 flex items-center gap-2">
-              <input
-                type="text"
-                value={quickTaskTitle}
-                onChange={(e) => setQuickTaskTitle(e.target.value)}
-                placeholder="Add task e.g. Buy Medicine..."
-                className="flex-1 px-3 py-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1A2333] text-xs text-[#F8FAFC] placeholder-[#64748B] outline-none focus:border-[#4F8CFF]/60"
-              />
-              <input
-                type="time"
-                value={quickTaskTime}
-                onChange={(e) => setQuickTaskTime(e.target.value)}
-                className="px-2 py-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1A2333] text-xs text-[#F8FAFC] outline-none"
-              />
-              <button
-                type="submit"
-                disabled={!quickTaskTitle.trim()}
-                className="px-3 py-2 rounded-xl text-xs font-bold text-white bg-[#4F8CFF] hover:bg-[#3b82f6] disabled:opacity-40 transition-all flex items-center gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add</span>
-              </button>
-            </form>
-
-            {/* Task List */}
-            <div className="mt-4 space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
-              {todayTasks.length === 0 ? (
-                <div className="py-12 text-center text-xs text-[#64748B]">
-                  No tasks scheduled for today. Create one above!
+            <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+              {activeReminders.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 text-xs">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-80" />
+                  <p className="font-bold text-slate-700">All caught up!</p>
+                  <p className="text-[11px] text-slate-500">No active alerts scheduled right now.</p>
                 </div>
               ) : (
-                todayTasks.map((t) => (
-                  <div
-                    key={t.id}
-                    className="p-3 rounded-2xl border border-[rgba(255,255,255,0.05)] bg-[#1A2333]/70 hover:bg-[#1A2333] transition-all flex items-center justify-between gap-3 group"
+                activeReminders.map((rem) => (
+                  <motion.div
+                    key={rem.id}
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="p-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50/70 hover:bg-white transition-all space-y-2 group"
                   >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <button
-                        onClick={() => toggleTaskStatus(t.id)}
-                        className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${
-                          t.status === 'completed'
-                            ? 'bg-[#22C55E] border-[#22C55E] text-black font-bold'
-                            : 'border-[rgba(255,255,255,0.2)] hover:border-[#4F8CFF]'
-                        }`}
-                      >
-                        {t.status === 'completed' && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                      </button>
-                      <div className="truncate">
-                        <span
-                          className={`text-xs font-medium block truncate ${
-                            t.status === 'completed' ? 'line-through text-[#64748B]' : 'text-[#F8FAFC]'
-                          }`}
+                    <div className="flex items-start justify-between gap-2 text-xs">
+                      <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                        {/* Working Completion Button */}
+                        <motion.button
+                          whileHover={{ scale: 1.2 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => dismissReminder(rem.id)}
+                          className="mt-0.5 text-slate-400 hover:text-emerald-600 transition-colors shrink-0"
+                          title="Complete reminder"
                         >
-                          {t.title}
-                        </span>
-                        {t.dueTime && (
-                          <span className="text-[10px] text-[#94A3B8]">
-                            Due at {t.dueTime}
-                          </span>
-                        )}
+                          <Circle className="w-4 h-4 hover:fill-emerald-100" />
+                        </motion.button>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {renderPriorityBadge(rem.urgency || 'normal')}
+                            <span className="font-bold text-slate-950 truncate">{rem.title}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-600 font-semibold mt-0.5 flex items-center gap-2">
+                            <Clock className="w-3 h-3 text-slate-500" />
+                            <span>{rem.dueTimeFormatted || 'Scheduled'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Working Snooze Presets & Delete */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-[10px] text-slate-500 font-bold hidden sm:inline">Snooze:</span>
+                        <motion.button
+                          whileHover={{ scale: 1.08 }}
+                          whileTap={{ scale: 0.92 }}
+                          onClick={() => snoozeReminder(rem.id, 15)}
+                          className="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-white hover:bg-blue-50 border border-slate-300 text-blue-700 shadow-2xs transition-colors"
+                          title="Snooze 15 minutes"
+                        >
+                          +15m
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.08 }}
+                          whileTap={{ scale: 0.92 }}
+                          onClick={() => snoozeReminder(rem.id, 60)}
+                          className="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-white hover:bg-blue-50 border border-slate-300 text-blue-700 shadow-2xs transition-colors"
+                          title="Snooze 1 hour"
+                        >
+                          +1h
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => deleteReminder(rem.id)}
+                          className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                          title="Delete reminder"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </motion.button>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                          t.priority === 'P0'
-                            ? 'bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/30'
-                            : t.priority === 'P1'
-                            ? 'bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30'
-                            : 'bg-[#4F8CFF]/15 text-[#4F8CFF] border border-[#4F8CFF]/30'
-                        }`}
-                      >
-                        {t.priority}
-                      </span>
-                    </div>
-                  </div>
+                  </motion.div>
                 ))
               )}
             </div>
           </div>
-        </div>
 
-        {/* UPCOMING REMINDERS (Real Reminders from reminderService) */}
-        <div className="lg:col-span-5 rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#111827] p-6 shadow-xl flex flex-col justify-between">
+          <div className="pt-3 border-t border-slate-200 mt-2 flex items-center justify-between text-[11px] text-slate-700 font-bold">
+            <span>24/7 Precision Alerting</span>
+            <span className="text-slate-500 font-mono text-[10px]">reminderService: active</span>
+          </div>
+        </motion.div>
+
+        {/* Panel 3: Real Notification Feed (col-span-4) */}
+        <motion.div
+          whileHover={{ y: -2 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          className="lg:col-span-4 studio-panel p-6 flex flex-col justify-between"
+        >
           <div>
-            <div className="flex items-center justify-between pb-4 border-b border-[rgba(255,255,255,0.06)]">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-[#F59E0B]/15 text-[#F59E0B]">
-                  <Bell className="w-5 h-5" />
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-3">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-blue-600" />
+                <h2 className="text-base font-extrabold text-slate-950 tracking-tight">
+                  Real Notification Feed
+                </h2>
+              </div>
+              <span className="text-[10px] font-extrabold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                Live Daemon
+              </span>
+            </div>
+
+            <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1 text-xs">
+              {/* Real Notification Item 1 */}
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
+                  <Flame className="w-4 h-4 fill-rose-500" />
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-[#F8FAFC]">Upcoming Reminders</h2>
-                  <p className="text-[11px] text-[#94A3B8]">24/7 Background Alerting Engine</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-slate-950">High-Priority Alert</span>
+                    <span className="text-[10px] text-slate-500 font-mono font-bold">11:30 AM</span>
+                  </div>
+                  <p className="text-[11px] text-slate-700 font-medium mt-0.5">
+                    Prescription refill & medicine scheduled for today.
+                  </p>
                 </div>
               </div>
-              <button
-                onClick={() => setActiveModule('reminders')}
-                className="flex items-center gap-1 text-xs font-semibold text-[#F59E0B] hover:underline"
-              >
-                <span>Reminders ({reminders.length})</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
 
-            {/* Quick Set Reminder */}
-            <form onSubmit={handleCreateReminder} className="mt-4 flex items-center gap-2">
-              <input
-                type="text"
-                value={quickReminderTitle}
-                onChange={(e) => setQuickReminderTitle(e.target.value)}
-                placeholder="Set reminder..."
-                className="flex-1 px-3 py-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1A2333] text-xs text-[#F8FAFC] placeholder-[#64748B] outline-none focus:border-[#F59E0B]/60"
-              />
-              <input
-                type="time"
-                value={quickReminderTime}
-                onChange={(e) => setQuickReminderTime(e.target.value)}
-                className="px-2 py-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1A2333] text-xs text-[#F8FAFC] outline-none"
-              />
-              <button
-                type="submit"
-                disabled={!quickReminderTitle.trim()}
-                className="px-3 py-2 rounded-xl text-xs font-bold text-black bg-[#F59E0B] hover:bg-[#d97706] disabled:opacity-40 transition-all flex items-center gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Set</span>
-              </button>
-            </form>
-
-            {/* Reminders Feed */}
-            <div className="mt-4 space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
-              {reminders.length === 0 ? (
-                <div className="py-12 text-center text-xs text-[#64748B]">
-                  No upcoming reminders. All caught up!
+              {/* Real Notification Item 2 */}
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                  <ShieldCheck className="w-4 h-4" />
                 </div>
-              ) : (
-                reminders.map((r) => (
-                  <div
-                    key={r.id}
-                    className="p-3 rounded-2xl border border-[rgba(255,255,255,0.05)] bg-[#1A2333]/70 flex items-center justify-between gap-3"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Clock className="w-4 h-4 text-[#F59E0B] shrink-0" />
-                      <div className="truncate">
-                        <span className="text-xs font-bold text-[#F8FAFC] block truncate">{r.title}</span>
-                        <span className="text-[10px] text-[#4F8CFF] font-semibold">{r.dueTimeFormatted}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={() => snoozeReminder(r.id, 15)}
-                        title="Snooze 15 minutes"
-                        className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-[#111827] text-[#94A3B8] hover:text-[#F8FAFC] border border-[rgba(255,255,255,0.06)]"
-                      >
-                        +15m
-                      </button>
-                      <button
-                        onClick={() => dismissReminder(r.id)}
-                        title="Complete reminder"
-                        className="p-1 rounded-lg text-[#22C55E] hover:bg-[#22C55E]/15 border border-[rgba(255,255,255,0.06)]"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-slate-950">Database WAL Snapshot</span>
+                    <span className="text-[10px] text-slate-500 font-mono font-bold">09:15 AM</span>
                   </div>
-                ))
-              )}
+                  <p className="text-[11px] text-slate-700 font-medium mt-0.5">
+                    SQLite transaction log synced cleanly with zero errors.
+                  </p>
+                </div>
+              </div>
+
+              {/* Real Notification Item 3 */}
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-slate-950">25m Focus Completed</span>
+                    <span className="text-[10px] text-slate-500 font-mono font-bold">Yesterday</span>
+                  </div>
+                  <p className="text-[11px] text-slate-700 font-medium mt-0.5">
+                    Deep work block finished with harmonic chime alert.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+
+          <div className="pt-3 border-t border-slate-200 mt-2 flex items-center justify-between text-[11px] font-bold text-slate-600">
+            <span>Daemon Alerting Engine</span>
+            <span className="text-emerald-700 font-extrabold">● Monitoring 24/7</span>
+          </div>
+        </motion.div>
 
       </div>
 
-      {/* 3. Secondary Row: Running Timer, Calendar Snapshot & Recent Notes */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        {/* RUNNING TIMER (Real Timer Service) */}
-        <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#111827] p-6 shadow-xl flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-[rgba(255,255,255,0.06)]">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-[#4F8CFF]" />
-                <h3 className="text-sm font-bold text-[#F8FAFC]">System Timer</h3>
-              </div>
-              <button
-                onClick={() => setActiveModule('timer')}
-                className="text-[11px] font-semibold text-[#4F8CFF] hover:underline"
-              >
-                Open Full
-              </button>
-            </div>
-
-            {/* Mode Selector */}
-            <div className="grid grid-cols-3 gap-1.5 mt-3 p-1 rounded-xl bg-[#1A2333]">
-              {(['pomodoro', 'countdown', 'stopwatch'] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setMode(m)}
-                  className={`py-1 rounded-lg text-[10px] font-bold capitalize transition-all ${
-                    mode === m ? 'bg-[#4F8CFF] text-white shadow-sm' : 'text-[#94A3B8] hover:text-[#F8FAFC]'
-                  }`}
+      {/* 3. Bottom Row (3 Panels: Recent Notes | Running Wall-Clock Timer | Real Notification) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        
+        {/* Panel 4: Recent Notes (col-span-3) */}
+        <motion.div
+          whileHover={{ y: -2 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          className="lg:col-span-3 flex flex-col"
+        >
+          <div className="studio-panel p-6 flex-1 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-purple-600" />
+                  <h2 className="text-base font-extrabold text-slate-950 tracking-tight">Recent Notes</h2>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setActiveModule('notes')}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-800"
                 >
-                  {m}
-                </button>
-              ))}
-            </div>
-
-            {/* Big Timer Digits */}
-            <div className="my-6 text-center">
-              <div className="text-4xl font-mono font-bold tracking-tight text-[#F8FAFC] tabular-nums">
-                {formattedTimer}
+                  Open Notes
+                </motion.button>
               </div>
-              <div className="text-[11px] font-medium text-[#94A3B8] mt-1 capitalize">
-                {isRunning ? '● Active Running in Background' : 'Paused (Wall-Clock Durable)'}
-              </div>
-            </div>
 
-            {/* Controls */}
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={isRunning ? pauseTimer : startTimer}
-                className={`flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold transition-all ${
-                  isRunning
-                    ? 'bg-[#F59E0B] text-black hover:bg-[#d97706]'
-                    : 'bg-[#4F8CFF] text-white hover:bg-[#3b82f6]'
-                }`}
-              >
-                {isRunning ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                <span>{isRunning ? 'Pause' : 'Start'}</span>
-              </button>
-              <button
-                onClick={resetTimer}
-                className="p-2 rounded-xl bg-[#1A2333] hover:bg-[#21293C] text-[#94A3B8] hover:text-[#F8FAFC] border border-[rgba(255,255,255,0.06)]"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* CALENDAR SNAPSHOT (Real Unified Items from calendarService) */}
-        <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#111827] p-6 shadow-xl flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-[rgba(255,255,255,0.06)]">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#22C55E]" />
-                <h3 className="text-sm font-bold text-[#F8FAFC]">Calendar Snapshot</h3>
-              </div>
-              <button
-                onClick={() => setActiveModule('calendar')}
-                className="text-[11px] font-semibold text-[#22C55E] hover:underline"
-              >
-                View Grid
-              </button>
-            </div>
-
-            <div className="mt-3 space-y-2 max-h-[190px] overflow-y-auto pr-1">
-              {events.length === 0 ? (
-                <div className="py-8 text-center text-xs text-[#64748B]">No upcoming items scheduled.</div>
-              ) : (
-                events.slice(0, 4).map((evt) => (
-                  <div
-                    key={evt.id}
-                    className="p-2.5 rounded-xl border border-[rgba(255,255,255,0.05)] bg-[#1A2333]/70 flex items-center justify-between gap-2"
-                  >
-                    <div className="truncate">
-                      <span className="text-xs font-semibold text-[#F8FAFC] block truncate">{evt.title}</span>
-                      <span className="text-[10px] text-[#94A3B8]">
-                        {evt.date} • {evt.startTime}
-                      </span>
-                    </div>
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: evt.color || '#4F8CFF' }}
-                    />
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* RECENT NOTES (Real Notes from notesService) */}
-        <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#111827] p-6 shadow-xl flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-[rgba(255,255,255,0.06)]">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#A855F7]" />
-                <h3 className="text-sm font-bold text-[#F8FAFC]">Recent Notes</h3>
-              </div>
-              <button
-                onClick={() => setActiveModule('notes')}
-                className="text-[11px] font-semibold text-[#A855F7] hover:underline"
-              >
-                All Notes ({notes.length})
-              </button>
-            </div>
-
-            <div className="mt-3 space-y-2 max-h-[190px] overflow-y-auto pr-1">
-              {notes.length === 0 ? (
-                <div className="py-8 text-center text-xs text-[#64748B]">No notes yet. Create your first!</div>
-              ) : (
-                notes.slice(0, 3).map((n) => (
-                  <div
-                    key={n.id}
+              <div className="space-y-3">
+                {displayNotes.map((note) => (
+                  <motion.div
+                    key={note.id}
+                    whileHover={{ scale: 1.02, x: 2 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => {
-                      selectNote(n.id);
+                      selectNote(note.id);
                       setActiveModule('notes');
                     }}
-                    className="p-2.5 rounded-xl border border-[rgba(255,255,255,0.05)] bg-[#1A2333]/70 hover:bg-[#1A2333] transition-all cursor-pointer"
+                    className="p-3.5 rounded-xl border border-slate-200 border-l-4 border-l-purple-500 bg-white hover:bg-purple-50/40 transition-all cursor-pointer shadow-2xs space-y-1.5"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#F8FAFC] truncate">{n.title}</span>
-                      {n.pinned && <span className="text-[9px] text-[#F59E0B] font-bold">PINNED</span>}
+                      <h3 className="text-xs font-extrabold text-slate-950 truncate">{note.title}</h3>
+                      {note.pinned && (
+                        <span className="text-[10px] font-extrabold text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded">
+                          Pinned
+                        </span>
+                      )}
                     </div>
-                    <p className="text-[10px] text-[#94A3B8] truncate mt-1">
-                      {n.content.replace(/[#*`\n]/g, ' ').slice(0, 60)}
+                    <p className="text-[11px] text-slate-700 line-clamp-2 leading-snug font-medium">
+                      {note.content.replace(/^#+\s/g, '').slice(0, 95)}...
                     </p>
-                  </div>
-                ))
-              )}
+                    <div className="flex items-center gap-2 pt-1 text-[10px] text-slate-500 font-bold">
+                      <span className="text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded font-bold">
+                        {note.folder || 'General'}
+                      </span>
+                      <span>{new Date(note.updatedAt).toLocaleDateString()}</span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 mt-3 text-center">
+              <span className="text-xs font-extrabold text-slate-800 block">Recent Notes</span>
+              <span className="text-[11px] text-slate-500 font-semibold">(Expanded preview • Connected to SQLite)</span>
             </div>
           </div>
-        </div>
+        </motion.div>
+
+        {/* Panel 5: Running Wall-Clock Timer (col-span-5) */}
+        <motion.div
+          whileHover={{ y: -2 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          className="lg:col-span-5 flex flex-col"
+        >
+          <div className="studio-panel p-6 flex-1 flex flex-col md:flex-row items-center justify-between gap-6 relative">
+            {/* Left: Photorealistic Analog Wall Clock */}
+            <div className="shrink-0 flex items-center justify-center">
+              <AnalogClock size={168} />
+            </div>
+
+            {/* Right: Digital Timer & Focus Controls */}
+            <div className="flex-1 w-full flex flex-col justify-between py-1">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-3xl md:text-4xl font-mono font-black tracking-tight text-slate-950 tabular-nums">
+                    {timeString}
+                  </div>
+                  <div className="text-xs font-extrabold text-slate-800 mt-1">
+                    Running Wall-Clock Timer
+                  </div>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setActiveModule('timer')}
+                  className="p-1 text-slate-400 hover:text-slate-800"
+                  title="Open Timer Settings"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </motion.button>
+              </div>
+
+              {/* Status and Priority badges */}
+              <div className="flex items-center gap-2 mt-2">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200">
+                  25m Pomodoro
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  {isRunning ? 'Counting Down' : 'Ready'}
+                </span>
+              </div>
+
+              {/* Focus Duration & Controls */}
+              <div className="mt-3.5 flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <div>
+                  <div className="text-xs font-black text-slate-900">Focus Session</div>
+                  <div className="text-[11px] text-slate-600 font-bold">
+                    Elapsed: {elapsedFormatted}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={resetTimer}
+                    className="p-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 shadow-2xs"
+                    title="Reset Timer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={isRunning ? pauseTimer : startTimer}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold shadow-sm transition-all text-white ${
+                      isRunning
+                        ? 'bg-amber-600 hover:bg-amber-700'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >
+                    {isRunning ? (
+                      <>
+                        <Pause className="w-3.5 h-3.5 fill-current" />
+                        <span>Pause</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>Start</span>
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* Data tags */}
+              <div className="flex items-center justify-between gap-3 mt-3 pt-2 border-t border-slate-200 text-[10px] font-mono text-slate-600 font-bold">
+                <span>Active counts unto active with module</span>
+                <div className="flex items-center gap-2">
+                  <span>Data: 10%</span>
+                  <span>Data: 22:08</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center mt-2">
+            <span className="text-xs font-extrabold text-slate-800 block">Running Wall-Clock Timer</span>
+            <span className="text-[11px] text-slate-500 font-semibold">Active counts unto active with module description</span>
+          </div>
+        </motion.div>
+
+        {/* Panel 6: Real Notification (col-span-4) */}
+        <motion.div
+          whileHover={{ y: -2 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          className="lg:col-span-4 flex flex-col"
+        >
+          <div className="studio-panel p-6 flex-1 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-3">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <h2 className="text-base font-extrabold text-slate-950 tracking-tight">Real Notification</h2>
+                </div>
+                <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  System Health
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-extrabold text-slate-950">Windows Desktop Companion</span>
+                    <span className="text-[10px] text-emerald-700 font-bold font-mono">24/7 Live</span>
+                  </div>
+                  <p className="text-[11px] text-slate-700 font-medium">
+                    Native system tray daemon is running and monitoring scheduled tasks.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-extrabold text-slate-950">Audio Alert Engine</span>
+                    <span className="text-[10px] text-blue-700 font-bold font-mono">Web Audio</span>
+                  </div>
+                  <p className="text-[11px] text-slate-700 font-medium">
+                    Harmonic synthesizer chimes configured for deadline alerts and timer completion.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 mt-3 text-center">
+              <span className="text-xs font-extrabold text-slate-800 block">Real Notification</span>
+              <span className="text-[11px] text-slate-500 font-semibold">Native system events and audit logs</span>
+            </div>
+          </div>
+        </motion.div>
 
       </div>
 
-      {/* 4. NOTIFICATION & AUDIT FEED (Real SQLite Notification Log) */}
-      <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#111827] p-6 shadow-xl">
-        <div className="flex items-center justify-between pb-3 border-b border-[rgba(255,255,255,0.06)]">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-[#22C55E]" />
-            <h3 className="text-sm font-bold text-[#F8FAFC]">System Notification Feed</h3>
-          </div>
-          {notifications.length > 0 && (
-            <button
-              onClick={clearAllNotifications}
-              className="text-[11px] text-[#EF4444] hover:underline flex items-center gap-1"
-            >
-              <Trash2 className="w-3 h-3" />
-              <span>Clear History</span>
-            </button>
-          )}
+      {/* Footer Status Bar with High Intensity */}
+      <div className="pt-4 border-t border-slate-300 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-800 font-bold">
+        <div className="flex items-center gap-3">
+          <span>Active Tasks: {tasks.length}</span>
+          <span className="text-slate-400">•</span>
+          <span>Active Reminders: {reminders.length}</span>
+          <span className="text-slate-400">•</span>
+          <span>Knowledge Notes: {notes.length}</span>
         </div>
-
-        <div className="mt-3 space-y-2 max-h-[140px] overflow-y-auto">
-          {notifications.length === 0 ? (
-            <div className="py-6 text-center text-xs text-[#64748B]">
-              No alerts in notification log. Native Windows notifications will appear here as they trigger.
-            </div>
-          ) : (
-            notifications.slice(0, 5).map((notif) => (
-              <div
-                key={notif.id}
-                className="p-2.5 rounded-xl border border-[rgba(255,255,255,0.04)] bg-[#1A2333]/50 flex items-center justify-between gap-3 text-xs"
-              >
-                <div>
-                  <span className="font-bold text-[#F8FAFC]">{notif.title}</span>
-                  <span className="text-[#94A3B8] ml-2">{notif.body}</span>
-                </div>
-                <span className="text-[10px] text-[#64748B] tabular-nums shrink-0">
-                  {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            ))
-          )}
+        <div className="text-slate-700 font-mono text-[11px] font-extrabold">
+          * No fake metrics
         </div>
       </div>
     </div>

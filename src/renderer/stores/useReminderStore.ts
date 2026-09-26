@@ -9,6 +9,7 @@ interface ReminderState {
   addReminder: (title: string, triggerTime: string, dueTimeFormatted: string, urgency?: Reminder['urgency'], taskId?: string) => Reminder;
   snoozeReminder: (id: string, minutes: number) => void;
   dismissReminder: (id: string) => void;
+  deleteReminder: (id: string) => void;
   triggerReminder: (id: string) => void;
 }
 
@@ -56,6 +57,11 @@ export const useReminderStore = create<ReminderState>((set) => ({
 
   dismissReminder: (id) => {
     reminderService.completeReminder(id);
+    set({ reminders: loadReminders() });
+  },
+
+  deleteReminder: (id) => {
+    reminderService.deleteReminder(id);
     set({ reminders: loadReminders() });
   },
 
