@@ -134,6 +134,33 @@ const INITIAL_SETTINGS: Record<string, string> = {
   theme: 'dark',
 };
 
+const INITIAL_NOTIFICATIONS: NotificationEntity[] = [
+  {
+    id: 'notif-1',
+    title: 'Reminder Engine Online',
+    body: '24/7 background scheduler daemon initialized with Web Audio chimes.',
+    urgency: 'urgent',
+    timestamp: new Date(Date.now() - 12 * 60000).toISOString(),
+    isRead: false,
+  },
+  {
+    id: 'notif-2',
+    title: 'Database WAL Snapshot',
+    body: 'SQLite transaction journal persisted cleanly with zero schema errors.',
+    urgency: 'normal',
+    timestamp: new Date(Date.now() - 45 * 60000).toISOString(),
+    isRead: false,
+  },
+  {
+    id: 'notif-3',
+    title: 'Desktop Companion Armed',
+    body: 'Personal Organizer offline desktop environment loaded and ready.',
+    urgency: 'normal',
+    timestamp: new Date(Date.now() - 120 * 60000).toISOString(),
+    isRead: true,
+  },
+];
+
 export class DatabaseService {
   private inMemoryDb: {
     tasks: TaskEntity[];
@@ -250,6 +277,11 @@ export class DatabaseService {
     this.persistToStorage();
   }
 
+  public deleteNotification(id: string): void {
+    this.inMemoryDb.notifications = this.inMemoryDb.notifications.filter((n) => n.id !== id);
+    this.persistToStorage();
+  }
+
   public clearNotifications(): void {
     this.inMemoryDb.notifications = [];
     this.persistToStorage();
@@ -305,7 +337,7 @@ export class DatabaseService {
             reminders: parsed.reminders || INITIAL_REMINDERS,
             notes: parsed.notes || INITIAL_NOTES,
             timer: parsed.timer || INITIAL_TIMER,
-            notifications: parsed.notifications || [],
+            notifications: parsed.notifications && parsed.notifications.length > 0 ? parsed.notifications : INITIAL_NOTIFICATIONS,
             settings: parsed.settings || INITIAL_SETTINGS,
           };
         }
@@ -318,7 +350,7 @@ export class DatabaseService {
       reminders: INITIAL_REMINDERS,
       notes: INITIAL_NOTES,
       timer: INITIAL_TIMER,
-      notifications: [],
+      notifications: INITIAL_NOTIFICATIONS,
       settings: INITIAL_SETTINGS,
     };
   }

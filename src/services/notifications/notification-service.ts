@@ -16,8 +16,28 @@ export interface DispatchNotificationOptions {
 }
 
 export class NotificationService {
+  private listeners: Set<(notifications: NotificationEntity[]) => void> = new Set();
+
   constructor() {
     this.requestPermission();
+  }
+
+  public subscribe(listener: (notifications: NotificationEntity[]) => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notifyListeners(): void {
+    const list = this.getNotifications();
+    this.listeners.forEach((fn) => {
+      try {
+        fn(list);
+      } catch (err) {
+        console.error('[NotificationService] Listener error:', err);
+      }
+    });
   }
 
   public requestPermission(): void {
@@ -60,6 +80,7 @@ export class NotificationService {
     };
 
     databaseService.addNotification(entity);
+    this.notifyListeners();
     return entity;
   }
 
@@ -69,10 +90,17 @@ export class NotificationService {
 
   public markAsRead(id: string): void {
     databaseService.markNotificationRead(id);
+    this.notifyListeners();
+  }
+
+  public deleteNotification(id: string): void {
+    databaseService.deleteNotification(id);
+    this.notifyListeners();
   }
 
   public clearAll(): void {
     databaseService.clearNotifications();
+    this.notifyListeners();
   }
 }
 

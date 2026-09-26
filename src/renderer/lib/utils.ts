@@ -40,3 +40,33 @@ export function formatDisplayDate(date: Date = new Date()): {
 
   return { weekday, monthDay, weekNumber };
 }
+
+export function formatRelativeTime(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    const now = Date.now();
+    const diffMs = now - date.getTime();
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+
+    if (diffSecs < 45) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) {
+      return new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+      }).format(date);
+    }
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true,
+    }).format(date);
+  } catch {
+    return 'Recently';
+  }
+}

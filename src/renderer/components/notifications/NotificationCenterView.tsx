@@ -20,13 +20,23 @@ import {
   ShieldCheck,
   Calendar,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { useReminderStore } from '@/stores/useReminderStore';
+import { useNotificationStore } from '@/stores/useNotificationStore';
 import { soundSynth } from '@/lib/sound-synth';
-import { notificationService } from '@/services/notifications/notification-service';
+import { formatRelativeTime } from '@/lib/utils';
 
 export const NotificationCenterView: React.FC = () => {
   const { reminders, snoozeReminder, dismissReminder, deleteReminder, addReminder } = useReminderStore();
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    dismissNotification,
+    clearAll,
+    dispatchNotification,
+  } = useNotificationStore();
 
   const [activeTab, setActiveTab] = useState<'Active' | 'Pinned' | 'Historical'>('Active');
   const [soundVolume, setSoundVolume] = useState(0.8);
@@ -56,7 +66,7 @@ export const NotificationCenterView: React.FC = () => {
   };
 
   const handleTestChime = () => {
-    notificationService.dispatch({
+    dispatchNotification({
       title: 'Personal Organizer Alert',
       body: '24/7 background alerting engine active with Web Audio chime.',
       urgency: 'urgent',
@@ -135,22 +145,98 @@ export const NotificationCenterView: React.FC = () => {
       {/* 2. Main 3-Panel Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         
-        {/* PANEL 1: UPCOMING REAL REMINDERS (col-span-5) */}
+        {/* PANEL 1: UPCOMING REAL REMINDERS OR NOTIFICATION FEED (col-span-5) */}
         <div className="lg:col-span-5 studio-panel p-6 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-200">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-amber-500" />
               <h3 className="font-black text-xs text-slate-950 uppercase">
-                UPCOMING REAL REMINDERS <span className="text-slate-500 font-bold normal-case">({reminders.length} Scheduled)</span>
+                {activeTab === 'Historical' ? (
+                  <>NOTIFICATION EVENT FEED <span className="text-slate-500 font-bold normal-case">({notifications.length} Logged)</span></>
+                ) : (
+                  <>UPCOMING REAL REMINDERS <span className="text-slate-500 font-bold normal-case">({reminders.length} Scheduled)</span></>
+                )}
               </h3>
             </div>
-            <span className="text-[10px] font-extrabold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
-              Live Alerting
-            </span>
+            <div className="flex items-center gap-1.5">
+              {activeTab === 'Historical' && notifications.length > 0 && (
+                <button
+                  onClick={clearAll}
+                  className="text-[10px] font-extrabold text-slate-500 hover:text-rose-600 transition-colors px-1.5 py-0.5 rounded hover:bg-rose-50"
+                  title="Clear All Notifications"
+                >
+                  Clear All
+                </button>
+              )}
+              <span className="text-[10px] font-extrabold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                {activeTab === 'Historical' ? `${unreadCount} Unread` : 'Live Alerting'}
+              </span>
+            </div>
           </div>
 
           <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
-            {reminders.length === 0 ? (
+            {activeTab === 'Historical' ? (
+              notifications.length === 0 ? (
+                <div className="text-center py-10 text-slate-500 text-xs">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                  <p className="font-bold text-slate-700">Notification history is empty.</p>
+                  <p className="text-[11px] text-slate-500">Alerts will be logged here as reminders trigger.</p>
+                </div>
+              ) : (
+                notifications.map((notif) => (
+                  <motion.div
+                    key={notif.id}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className={`p-3.5 rounded-2xl border transition-all space-y-2 group shadow-2xs ${
+                      notif.isRead
+                        ? 'bg-slate-50/70 border-slate-200 text-slate-600'
+                        : 'bg-white border-blue-200 shadow-xs text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 text-xs">
+                      <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                        <div className="mt-0.5 shrink-0">
+                          {renderUrgencyBadge(notif.urgency)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-950 truncate">{notif.title}</span>
+                            <span className="text-[10px] text-slate-500 font-mono font-bold shrink-0 ml-2">
+                              {formatRelativeTime(notif.timestamp)}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 font-medium mt-1">
+                            {notif.body}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        {!notif.isRead && (
+                          <button
+                            onClick={() => markAsRead(notif.id)}
+                            className="p-1 rounded text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                            title="Mark as Read"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => dismissNotification(notif.id)}
+                          className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          title="Dismiss / Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              )
+            ) : reminders.length === 0 ? (
               <div className="text-center py-10 text-slate-500 text-xs">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                 <p className="font-bold text-slate-700">No active alerts scheduled.</p>

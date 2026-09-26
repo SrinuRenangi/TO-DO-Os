@@ -13,6 +13,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { useAppStore, MODULE_REGISTRY } from '@/stores/useAppStore';
+import { useNotificationStore } from '@/stores/useNotificationStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { CommandPalette } from './CommandPalette';
 import { QuickCaptureModal } from './QuickCaptureModal';
@@ -26,8 +27,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     activeModule,
     setActiveModule,
     setCommandPaletteOpen,
-    unreadNotifications,
   } = useAppStore();
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
 
   useKeyboardShortcuts();
 
@@ -89,7 +90,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             title="Notifications & Reminders"
           >
             <Bell className="w-4 h-4 stroke-[1.8]" />
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 border border-white" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-500 border-2 border-white text-[9px] font-black text-white flex items-center justify-center shadow-xs">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </motion.button>
 
           {/* User Profile Avatar */}

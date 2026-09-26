@@ -8,6 +8,7 @@ import { TaskEntity, Priority, RecurringPattern, SubtaskEntity } from '../databa
 import { generateId } from '@/lib/utils';
 import { soundSynth } from '@/lib/sound-synth';
 import { reminderService } from '../reminders/reminder-service';
+import { notificationService } from '../notifications/notification-service';
 
 export interface CreateTaskInput {
   title: string;
@@ -99,6 +100,12 @@ export class TaskService {
 
     if (isBecomingComplete) {
       soundSynth.playChime('complete');
+      notificationService.dispatch({
+        title: `Task Completed: ${task.title}`,
+        body: 'Marked completed in Personal Organizer.',
+        urgency: 'normal',
+        sound: false,
+      });
     }
 
     const updatedTask: TaskEntity = {
