@@ -7,8 +7,10 @@ interface AppState {
   sidebarCollapsed: boolean;
   commandPaletteOpen: boolean;
   quickCaptureOpen: boolean;
+  notificationCenterOpen: boolean;
   unreadNotifications: number;
-  
+  activeWidgetIds: string[];
+
   // Actions
   setActiveModule: (module: AppModuleId) => void;
   toggleTheme: () => void;
@@ -16,22 +18,20 @@ interface AppState {
   toggleSidebar: () => void;
   setCommandPaletteOpen: (open: boolean) => void;
   setQuickCaptureOpen: (open: boolean) => void;
+  setNotificationCenterOpen: (open: boolean) => void;
+  toggleNotificationCenter: () => void;
   decrementNotifications: () => void;
+  reorderWidgets: (newOrder: string[]) => void;
 }
 
 export const MODULE_REGISTRY: AppModuleMeta[] = [
-  { id: 'dashboard', name: 'Dashboard', description: 'Central Command Center', iconName: 'LayoutDashboard', hotkey: '1' },
-  { id: 'tasks', name: 'Task System', description: 'Linear-grade task engine', iconName: 'CheckSquare', hotkey: '2' },
-  { id: 'notes', name: 'Notes System', description: 'Knowledge base & thoughts', iconName: 'FileText', hotkey: '3' },
-  { id: 'habits', name: 'Habit Tracker', description: 'Atomic habits & streaks', iconName: 'Flame', hotkey: '4' },
-  { id: 'focus', name: 'Focus Center', description: 'Deep work & Pomodoro', iconName: 'Clock', hotkey: '5' },
-  { id: 'calendar', name: 'Calendar', description: 'Timeblocking & agenda', iconName: 'Calendar', hotkey: '6' },
-  { id: 'goals', name: 'Goal Tracker', description: 'Objectives & Key Results', iconName: 'Target', hotkey: '7' },
-  { id: 'reminders', name: 'Reminders', description: 'Smart escalating alerts', iconName: 'Bell', hotkey: '8' },
-  { id: 'analytics', name: 'Analytics', description: 'Productivity trends', iconName: 'BarChart2', hotkey: '9' },
-  { id: 'calculator', name: 'Calculator', description: 'Spotlight math & units', iconName: 'Calculator' },
-  { id: 'ai', name: 'AI Assistant', description: 'Productivity copilot', iconName: 'Sparkles' },
-  { id: 'settings', name: 'Settings', description: 'Preferences & backup', iconName: 'Settings' },
+  { id: 'dashboard', name: 'Dashboard', description: 'System Summary & Control Center', iconName: 'LayoutDashboard', hotkey: '1' },
+  { id: 'tasks', name: 'Tasks', description: 'List & Kanban execution engine', iconName: 'CheckSquare', hotkey: '2' },
+  { id: 'calendar', name: 'Calendar', description: 'Real tasks & scheduled timeline', iconName: 'Calendar', hotkey: '3' },
+  { id: 'reminders', name: 'Reminders', description: '24/7 background audio alerts', iconName: 'Bell', hotkey: '4' },
+  { id: 'notes', name: 'Notes', description: 'Markdown notes & pinned memos', iconName: 'FileText', hotkey: '5' },
+  { id: 'timer', name: 'Timer', description: 'Pomodoro, stopwatch & countdown', iconName: 'Clock', hotkey: '6' },
+  { id: 'settings', name: 'Settings', description: 'Auto-start, tray & backup durability', iconName: 'Settings', hotkey: '7' },
 ];
 
 export const useAppStore = create<AppState>((set) => ({
@@ -40,10 +40,12 @@ export const useAppStore = create<AppState>((set) => ({
   sidebarCollapsed: false,
   commandPaletteOpen: false,
   quickCaptureOpen: false,
-  unreadNotifications: 3,
+  notificationCenterOpen: false,
+  unreadNotifications: 0,
+  activeWidgetIds: ['tasks', 'reminders', 'calendar', 'timer', 'notes', 'notifications'],
 
   setActiveModule: (module) => set({ activeModule: module }),
-  
+
   toggleTheme: () =>
     set((state) => {
       const next = state.theme === 'dark' ? 'light' : 'dark';
@@ -56,6 +58,10 @@ export const useAppStore = create<AppState>((set) => ({
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
   setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
   setQuickCaptureOpen: (open) => set({ quickCaptureOpen: open }),
+  setNotificationCenterOpen: (open) => set({ notificationCenterOpen: open }),
+  toggleNotificationCenter: () =>
+    set((state) => ({ notificationCenterOpen: !state.notificationCenterOpen })),
   decrementNotifications: () =>
     set((state) => ({ unreadNotifications: Math.max(0, state.unreadNotifications - 1) })),
+  reorderWidgets: (newOrder) => set({ activeWidgetIds: newOrder }),
 }));

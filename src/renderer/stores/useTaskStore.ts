@@ -1,154 +1,142 @@
 import { create } from 'zustand';
-import { Task, Priority, TaskStatus } from '@shared/types';
-import { generateId } from '@/lib/utils';
-import { soundSynth } from '@/lib/sound-synth';
+import { Task, Priority, TaskStatus, TaskCategory, RecurringPattern, Subtask } from '@shared/types';
+import { taskService } from '@/services/tasks/task-service';
+import { TaskEntity } from '@/services/database/types';
 
 interface TaskState {
   tasks: Task[];
   filterPriority: Priority | 'ALL';
   filterStatus: TaskStatus | 'ALL';
+  filterCategory: TaskCategory | 'ALL';
+  viewMode: 'list' | 'kanban';
   searchQuery: string;
 
   // Actions
-  addTask: (title: string, priority?: Priority, tags?: string[], estimatedMinutes?: number) => Task;
+  refreshTasks: () => void;
+  addTask: (
+    title: string,
+    priority?: Priority,
+    category?: TaskCategory,
+    dueDate?: string,
+    dueTime?: string,
+    recurring?: RecurringPattern,
+    tags?: string[],
+    estimatedMinutes?: number
+  ) => Task;
   toggleTaskStatus: (id: string) => void;
   deleteTask: (id: string) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
+  addSubtask: (taskId: string, title: string) => void;
+  toggleSubtask: (taskId: string, subtaskId: string) => void;
+  setViewMode: (mode: 'list' | 'kanban') => void;
   setFilterPriority: (priority: Priority | 'ALL') => void;
   setFilterStatus: (status: TaskStatus | 'ALL') => void;
+  setFilterCategory: (category: TaskCategory | 'ALL') => void;
   setSearchQuery: (query: string) => void;
 }
 
-const INITIAL_TASKS: Task[] = [
-  {
-    id: 'task-1',
-    title: 'Finalize Personal OS Architectural Blueprint & IPC Contract',
-    description: 'Ensure context isolation and zero latency typed invoke handlers.',
-    priority: 'P0',
-    status: 'completed',
-    estimatedMinutes: 45,
-    actualMinutes: 40,
-    tags: ['#architecture', '#core'],
-    subtasks: [
-      { id: 'sub-1', taskId: 'task-1', title: 'Draft IPC channel schema', isCompleted: true, sortOrder: 0 },
-      { id: 'sub-2', taskId: 'task-1', title: 'Specify Better-SQLite3 WAL pragmas', isCompleted: true, sortOrder: 1 },
-    ],
-    sortOrder: 0,
-    completedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-2',
-    title: 'Deploy Apple-Grade Day Timeline & Timeblocker Component',
-    description: 'Render continuous 24-hour hour rule with live time marker.',
-    priority: 'P0',
-    status: 'in_progress',
-    estimatedMinutes: 60,
-    tags: ['#frontend', '#motion'],
-    subtasks: [
-      { id: 'sub-3', taskId: 'task-2', title: 'Calculate current minute offset', isCompleted: true, sortOrder: 0 },
-      { id: 'sub-4', taskId: 'task-2', title: 'Add fluid red timeline indicator', isCompleted: false, sortOrder: 1 },
-    ],
-    sortOrder: 1,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-3',
-    title: 'Configure Zero-Dependency Ambient Sound Generator',
-    description: 'Implement white noise, rain, and 40Hz gamma binaural oscillations via Web Audio API.',
-    priority: 'P1',
-    status: 'todo',
-    estimatedMinutes: 30,
-    tags: ['#audio', '#focus'],
-    subtasks: [],
-    sortOrder: 2,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-4',
-    title: 'Review Weekly Retrospective & Goal Key Results',
-    description: 'Verify Q3 deliverables and update progress bars.',
-    priority: 'P2',
-    status: 'todo',
-    estimatedMinutes: 25,
-    tags: ['#strategy'],
-    subtasks: [],
-    sortOrder: 3,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+function entityToTask(entity: TaskEntity, index: number): Task {
+  return {
+    id: entity.id,
+    title: entity.title,
+    description: entity.description,
+    priority: entity.priority,
+    status: entity.status === 'completed' ? 'completed' : 'todo',
+    category: 'Engineering',
+    dueDate: entity.dueDate,
+    dueTime: entity.dueTime,
+    recurring: entity.recurring,
+    tags: ['#task'],
+    sortOrder: index,
+    completedAt: entity.completedAt,
+    subtasks: entity.subtasks.map((s, idx) => ({
+      id: s.id,
+      taskId: s.taskId,
+      title: s.title,
+      isCompleted: s.completed,
+      sortOrder: idx,
+    })),
+    createdAt: entity.createdAt,
+    updatedAt: entity.updatedAt,
+  };
+}
+
+function loadTasksFromService(): Task[] {
+  const entities = taskService.getAllTasks();
+  return entities.map(entityToTask);
+}
 
 export const useTaskStore = create<TaskState>((set, get) => ({
-  tasks: INITIAL_TASKS,
+  tasks: loadTasksFromService(),
   filterPriority: 'ALL',
   filterStatus: 'ALL',
+  filterCategory: 'ALL',
+  viewMode: 'list',
   searchQuery: '',
 
-  addTask: (title, priority = 'P2', tags = ['#focus'], estimatedMinutes = 30) => {
-    const newTask: Task = {
-      id: generateId('task'),
+  refreshTasks: () => {
+    set({ tasks: loadTasksFromService() });
+  },
+
+  addTask: (
+    title,
+    priority = 'P2',
+    category = 'Engineering',
+    dueDate,
+    dueTime,
+    recurring = 'none',
+    tags = ['#task'],
+    estimatedMinutes
+  ) => {
+    const today = new Date().toISOString().split('T')[0];
+    const createdEntity = taskService.createTask({
       title,
       priority,
-      status: 'todo',
-      tags,
-      estimatedMinutes,
-      subtasks: [],
-      sortOrder: get().tasks.length,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      dueDate: dueDate || today,
+      dueTime,
+      recurring,
+    });
 
-    set((state) => ({
-      tasks: [newTask, ...state.tasks],
-    }));
-
-    return newTask;
+    const tasks = loadTasksFromService();
+    set({ tasks });
+    return entityToTask(createdEntity, tasks.length);
   },
 
   toggleTaskStatus: (id) => {
-    set((state) => {
-      const task = state.tasks.find((t) => t.id === id);
-      if (!task) return state;
-
-      const isBecomingComplete = task.status !== 'completed';
-      if (isBecomingComplete) {
-        soundSynth.playChime('complete');
-      }
-
-      return {
-        tasks: state.tasks.map((t) =>
-          t.id === id
-            ? {
-                ...t,
-                status: isBecomingComplete ? 'completed' : 'todo',
-                completedAt: isBecomingComplete ? new Date().toISOString() : undefined,
-                updatedAt: new Date().toISOString(),
-              }
-            : t
-        ),
-      };
-    });
+    taskService.toggleTaskComplete(id);
+    set({ tasks: loadTasksFromService() });
   },
 
   deleteTask: (id) => {
-    set((state) => ({
-      tasks: state.tasks.filter((t) => t.id !== id),
-    }));
+    taskService.deleteTask(id);
+    set({ tasks: loadTasksFromService() });
   },
 
   updateTask: (id, updates) => {
-    set((state) => ({
-      tasks: state.tasks.map((t) =>
-        t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t
-      ),
-    }));
+    taskService.updateTask(id, {
+      title: updates.title,
+      description: updates.description,
+      priority: updates.priority,
+      dueDate: updates.dueDate,
+      dueTime: updates.dueTime,
+      recurring: updates.recurring,
+    });
+    set({ tasks: loadTasksFromService() });
   },
 
+  addSubtask: (taskId, title) => {
+    taskService.addSubtask(taskId, title);
+    set({ tasks: loadTasksFromService() });
+  },
+
+  toggleSubtask: (taskId, subtaskId) => {
+    taskService.toggleSubtask(taskId, subtaskId);
+    set({ tasks: loadTasksFromService() });
+  },
+
+  setViewMode: (mode) => set({ viewMode: mode }),
   setFilterPriority: (priority) => set({ filterPriority: priority }),
   setFilterStatus: (status) => set({ filterStatus: status }),
+  setFilterCategory: (category) => set({ filterCategory: category }),
   setSearchQuery: (query) => set({ searchQuery: query }),
 }));

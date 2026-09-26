@@ -8,11 +8,10 @@ import { Priority } from '@shared/types';
 export const QuickCaptureModal: React.FC = () => {
   const { quickCaptureOpen, setQuickCaptureOpen } = useAppStore();
   const { addTask } = useTaskStore();
-  
+
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<Priority>('P1');
-  const [estimate, setEstimate] = useState<number>(30);
-  const [tag, setTag] = useState('#focus');
+  const [dueTime, setDueTime] = useState('18:00');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -26,7 +25,7 @@ export const QuickCaptureModal: React.FC = () => {
     e.preventDefault();
     if (!title.trim()) return;
 
-    addTask(title.trim(), priority, [tag], estimate);
+    addTask(title.trim(), priority, 'Engineering', undefined, dueTime, 'none', ['#capture']);
     setQuickCaptureOpen(false);
   };
 
@@ -39,18 +38,18 @@ export const QuickCaptureModal: React.FC = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full max-w-lg rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[#151922] p-5 shadow-2xl"
+            className="w-full max-w-lg rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#111827] p-6 shadow-2xl"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-[rgba(255,255,255,0.07)]">
+            <div className="flex items-center justify-between pb-3 border-b border-[rgba(255,255,255,0.06)]">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-[#007AFF]/15 text-[#007AFF]">
+                <div className="p-1.5 rounded-xl bg-[#4F8CFF]/15 text-[#4F8CFF]">
                   <Plus className="w-4 h-4" />
                 </div>
-                <h3 className="text-sm font-semibold text-[#F8FAFC]">Quick Capture</h3>
+                <h3 className="text-sm font-bold text-[#F8FAFC]">Quick Capture Task</h3>
               </div>
               <button
                 onClick={() => setQuickCaptureOpen(false)}
-                className="p-1 rounded-lg text-[#64748B] hover:text-[#F8FAFC] hover:bg-[#1D2330]"
+                className="p-1 rounded-lg text-[#64748B] hover:text-[#F8FAFC] hover:bg-[#1A2333]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -62,8 +61,8 @@ export const QuickCaptureModal: React.FC = () => {
                   ref={inputRef}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="What needs to be done? (Press Enter to capture)"
-                  className="w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1D2330] px-3.5 py-2.5 text-sm text-[#F8FAFC] placeholder-[#64748B] outline-none focus:border-[#007AFF]"
+                  placeholder="Task title (e.g. Buy Medicine, Review system specs)..."
+                  className="w-full rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#1A2333] px-3.5 py-2.5 text-xs text-[#F8FAFC] placeholder-[#64748B] outline-none focus:border-[#4F8CFF]/60"
                 />
               </div>
 
@@ -78,7 +77,7 @@ export const QuickCaptureModal: React.FC = () => {
                     const colors = {
                       P0: 'text-[#EF4444] border-[#EF4444]/40 bg-[#EF4444]/10',
                       P1: 'text-[#F59E0B] border-[#F59E0B]/40 bg-[#F59E0B]/10',
-                      P2: 'text-[#007AFF] border-[#007AFF]/40 bg-[#007AFF]/10',
+                      P2: 'text-[#4F8CFF] border-[#4F8CFF]/40 bg-[#4F8CFF]/10',
                       P3: 'text-[#64748B] border-[#64748B]/40 bg-[#64748B]/10',
                     };
                     return (
@@ -86,8 +85,8 @@ export const QuickCaptureModal: React.FC = () => {
                         key={p}
                         type="button"
                         onClick={() => setPriority(p)}
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
-                          isSelected ? `${colors[p]} shadow-sm` : 'text-[#64748B] border-transparent hover:bg-[#1D2330]'
+                        className={`px-2.5 py-1 text-xs font-semibold rounded-xl border transition-all ${
+                          isSelected ? `${colors[p]} shadow-sm` : 'text-[#64748B] border-transparent hover:bg-[#1A2333]'
                         }`}
                       >
                         {p}
@@ -97,53 +96,20 @@ export const QuickCaptureModal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Estimate Selection */}
+              {/* Due Time */}
               <div className="flex items-center justify-between">
                 <span className="text-xs text-[#94A3B8] flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" /> Estimate
+                  <Clock className="w-3.5 h-3.5" /> Due Time
                 </span>
-                <div className="flex gap-1.5">
-                  {[15, 30, 45, 60].map((mins) => (
-                    <button
-                      key={mins}
-                      type="button"
-                      onClick={() => setEstimate(mins)}
-                      className={`px-2.5 py-1 text-xs rounded-lg border transition-all ${
-                        estimate === mins
-                          ? 'border-[#007AFF] text-[#007AFF] bg-[#007AFF]/10'
-                          : 'border-transparent text-[#64748B] hover:bg-[#1D2330]'
-                      }`}
-                    >
-                      {mins}m
-                    </button>
-                  ))}
-                </div>
+                <input
+                  type="time"
+                  value={dueTime}
+                  onChange={(e) => setDueTime(e.target.value)}
+                  className="px-2.5 py-1 text-xs rounded-xl bg-[#1A2333] border border-[rgba(255,255,255,0.08)] text-[#F8FAFC] outline-none"
+                />
               </div>
 
-              {/* Tag Selection */}
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-[#94A3B8] flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5" /> Tag
-                </span>
-                <div className="flex gap-1.5">
-                  {['#focus', '#strategy', '#code', '#personal'].map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setTag(t)}
-                      className={`px-2.5 py-1 text-xs rounded-lg border transition-all ${
-                        tag === t
-                          ? 'border-[#8B5CF6] text-[#8B5CF6] bg-[#8B5CF6]/10'
-                          : 'border-transparent text-[#64748B] hover:bg-[#1D2330]'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-[rgba(255,255,255,0.07)]">
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-[rgba(255,255,255,0.06)]">
                 <button
                   type="button"
                   onClick={() => setQuickCaptureOpen(false)}
@@ -154,9 +120,9 @@ export const QuickCaptureModal: React.FC = () => {
                 <button
                   type="submit"
                   disabled={!title.trim()}
-                  className="px-4 py-1.5 text-xs font-semibold text-white bg-[#007AFF] hover:bg-[#0062CC] rounded-xl shadow-md disabled:opacity-40 transition-all"
+                  className="px-4 py-2 text-xs font-bold text-white bg-[#4F8CFF] hover:bg-[#3b82f6] rounded-xl shadow-md disabled:opacity-40 transition-all"
                 >
-                  Add Task (↵)
+                  Capture Task (↵)
                 </button>
               </div>
             </form>
@@ -166,3 +132,5 @@ export const QuickCaptureModal: React.FC = () => {
     </AnimatePresence>
   );
 };
+
+export default QuickCaptureModal;

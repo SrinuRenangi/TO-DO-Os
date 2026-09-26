@@ -1,116 +1,99 @@
 import { create } from 'zustand';
-import { FocusMode, SoundType } from '@shared/types';
+import { timerService } from '@/services/timer/timer-service';
+import { TimerEntity, TimerMode } from '@/services/database/types';
 import { soundSynth } from '@/lib/sound-synth';
+import { SoundType } from '@shared/types';
 
-interface FocusState {
-  mode: FocusMode;
-  targetMinutes: number;
+interface TimerState {
+  mode: TimerMode;
+  targetSeconds: number;
   remainingSeconds: number;
   isRunning: boolean;
   activeSound: SoundType;
   volume: number;
-  totalFocusMinutesToday: number;
-  sessionsCompletedToday: number;
 
   // Actions
-  setMode: (mode: FocusMode) => void;
+  setMode: (mode: TimerMode, customSeconds?: number) => void;
   startTimer: () => void;
   pauseTimer: () => void;
   resetTimer: () => void;
-  tick: () => void;
   setSoundType: (sound: SoundType) => void;
   setVolume: (volume: number) => void;
+  syncWithService: (entity: TimerEntity) => void;
 }
 
-const MODE_MINUTES: Record<FocusMode, number> = {
-  pomodoro: 25,
-  deep_work: 50,
-  ultradian: 90,
-  stopwatch: 0,
-};
+const initialTimer = timerService.getTimer();
 
-export const useFocusStore = create<FocusState>((set, get) => ({
-  mode: 'deep_work',
-  targetMinutes: 50,
-  remainingSeconds: 50 * 60,
-  isRunning: false,
-  activeSound: 'none',
-  volume: 0.25,
-  totalFocusMinutesToday: 95,
-  sessionsCompletedToday: 2,
-
-  setMode: (mode) => {
-    const mins = MODE_MINUTES[mode];
+export const useFocusStore = create<TimerState>((set, get) => {
+  // Subscribe to real background timer service
+  timerService.subscribe((timerEntity) => {
     set({
-      mode,
-      targetMinutes: mins,
-      remainingSeconds: mins * 60,
-      isRunning: false,
+      mode: timerEntity.mode,
+      targetSeconds: timerEntity.targetSeconds,
+      remainingSeconds: timerEntity.remainingSeconds,
+      isRunning: timerEntity.isRunning,
     });
-    soundSynth.stopAmbientSound();
-  },
+  });
 
-  startTimer: () => {
-    const { activeSound, volume } = get();
-    set({ isRunning: true });
-    soundSynth.playChime('start');
-    if (activeSound !== 'none') {
-      soundSynth.setAmbientSound(activeSound, volume);
-    }
-  },
+  return {
+    mode: initialTimer.mode,
+    targetSeconds: initialTimer.targetSeconds,
+    remainingSeconds: initialTimer.remainingSeconds,
+    isRunning: initialTimer.isRunning,
+    activeSound: 'none',
+    volume: 0.25,
 
-  pauseTimer: () => {
-    set({ isRunning: false });
-    soundSynth.stopAmbientSound();
-  },
-
-  resetTimer: () => {
-    const { mode } = get();
-    const mins = MODE_MINUTES[mode];
-    set({
-      remainingSeconds: mins * 60,
-      isRunning: false,
-    });
-    soundSynth.stopAmbientSound();
-  },
-
-  tick: () => {
-    const { remainingSeconds, isRunning, mode, targetMinutes, totalFocusMinutesToday, sessionsCompletedToday } = get();
-    if (!isRunning) return;
-
-    if (mode === 'stopwatch') {
-      set({ remainingSeconds: remainingSeconds + 1 });
-      return;
-    }
-
-    if (remainingSeconds <= 1) {
-      // Completed session
-      soundSynth.playChime('complete');
+    setMode: (mode, customSeconds) => {
+      timerService.setMode(mode, customSeconds);
       soundSynth.stopAmbientSound();
+    },
+
+    startTimer: () => {
+      const { activeSound, volume } = get();
+      timerService.start();
+      soundSynth.playChime('start');
+      if (activeSound !== 'none') {
+        soundSynth.setAmbientSound(activeSound, volume);
+      }
+    },
+
+    pauseTimer: () => {
+      timerService.pause();
+      soundSynth.stopAmbientSound();
+    },
+
+    resetTimer: () => {
+      timerService.reset();
+      soundSynth.stopAmbientSound();
+    },
+
+    setSoundType: (sound) => {
+      const { isRunning, volume } = get();
+      set({ activeSound: sound });
+      if (isRunning) {
+        if (sound === 'none') {
+          soundSynth.stopAmbientSound();
+        } else {
+          soundSynth.setAmbientSound(sound, volume);
+        }
+      }
+    },
+
+    setVolume: (volume) => {
+      const { isRunning, activeSound } = get();
+      set({ volume });
+      if (isRunning && activeSound !== 'none') {
+        soundSynth.setAmbientSound(activeSound, volume);
+      }
+    },
+
+    syncWithService: (entity) => {
       set({
-        isRunning: false,
-        remainingSeconds: targetMinutes * 60,
-        totalFocusMinutesToday: totalFocusMinutesToday + targetMinutes,
-        sessionsCompletedToday: sessionsCompletedToday + 1,
+        mode: entity.mode,
+        targetSeconds: entity.targetSeconds,
+        remainingSeconds: entity.remainingSeconds,
+        isRunning: entity.isRunning,
       });
-    } else {
-      set({ remainingSeconds: remainingSeconds - 1 });
-    }
-  },
-
-  setSoundType: (sound) => {
-    const { isRunning, volume } = get();
-    set({ activeSound: sound });
-    if (isRunning) {
-      soundSynth.setAmbientSound(sound, volume);
-    }
-  },
-
-  setVolume: (volume) => {
-    set({ volume });
-    const { isRunning, activeSound } = get();
-    if (isRunning && activeSound !== 'none') {
-      soundSynth.setAmbientSound(activeSound, volume);
-    }
-  },
-}));
+    },
+  };
+});

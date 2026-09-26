@@ -17,9 +17,11 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
+      "@/services/*": ["src/services/*"],
+      "@services/*": ["src/services/*"],
       "@/*": ["src/renderer/*"],
       "@shared/*": ["src/shared/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "tests"]
 }

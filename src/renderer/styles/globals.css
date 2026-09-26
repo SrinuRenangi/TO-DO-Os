@@ -2,45 +2,46 @@
 
 @layer base {
   :root {
-    --color-primary: #007AFF;
-    --color-primary-rgb: 0, 122, 255;
+    /* Personal OS — Linux Desktop Palette (Calm, Soft, Premium) */
+    --color-primary: #4F8CFF; /* Soft Elegant Blue Accent */
+    --color-primary-rgb: 79, 140, 255;
+    --color-accent: #4F8CFF;
     --color-success: #22C55E;
     --color-warning: #F59E0B;
     --color-danger: #EF4444;
-    --color-purple: #8B5CF6;
 
-    /* Dark Mode (Default) */
-    --bg-app: #0F1117;
-    --bg-surface: #151922;
-    --bg-surface-elevated: #1A1F2C;
-    --bg-card: #1D2330;
-    --bg-card-hover: #242B3B;
-    --border-subtle: rgba(255, 255, 255, 0.07);
-    --border-hover: rgba(255, 255, 255, 0.14);
-    --border-focus: rgba(0, 122, 255, 0.5);
+    /* Linux Desktop Dark Base (Deepin / KDE Plasma / Hyprland) */
+    --bg-desktop: #0B1220;
+    --bg-surface: #111827;
+    --bg-card: #1A2333;
+    --bg-card-hover: #222E44;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(79, 140, 255, 0.35);
+    --border-active: #4F8CFF;
     --text-primary: #F8FAFC;
     --text-secondary: #94A3B8;
     --text-muted: #64748B;
-    --glass-bg: rgba(21, 25, 34, 0.75);
-    --glass-card: rgba(29, 35, 48, 0.65);
+    --glass-bg: rgba(17, 24, 39, 0.85);
+    --glass-card: rgba(26, 35, 51, 0.8);
     --glass-border: rgba(255, 255, 255, 0.08);
+    --glow-accent: 0 0 20px rgba(79, 140, 255, 0.12);
   }
 
   [data-theme='light'] {
-    --bg-app: #F8FAFC;
+    --bg-desktop: #F8FAFC;
     --bg-surface: #FFFFFF;
-    --bg-surface-elevated: #F1F5F9;
     --bg-card: #F1F5F9;
     --bg-card-hover: #E2E8F0;
     --border-subtle: rgba(0, 0, 0, 0.08);
-    --border-hover: rgba(0, 0, 0, 0.16);
-    --border-focus: rgba(0, 122, 255, 0.6);
+    --border-hover: rgba(79, 140, 255, 0.4);
+    --border-active: #4F8CFF;
     --text-primary: #0F172A;
-    --text-secondary: #475569;
-    --text-muted: #94A3B8;
-    --glass-bg: rgba(255, 255, 255, 0.85);
-    --glass-card: rgba(241, 245, 249, 0.8);
+    --text-secondary: #334155;
+    --text-muted: #64748B;
+    --glass-bg: rgba(255, 255, 255, 0.9);
+    --glass-card: rgba(241, 245, 249, 0.85);
     --glass-border: rgba(0, 0, 0, 0.08);
+    --glow-accent: 0 0 15px rgba(79, 140, 255, 0.12);
   }
 
   * {
@@ -48,39 +49,39 @@
   }
 
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
-    background-color: var(--bg-app);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background-color: var(--bg-desktop);
     color: var(--text-primary);
   }
 
-  /* Custom Tabular numbers for clocks and timers */
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
 }
 
-/* Glassmorphism primitives */
-.glass-panel {
+/* Linux Desktop Glassmorphism & Frosted Panels */
+.plasma-glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--glass-border);
 }
 
-.glass-card {
+.plasma-card {
   background: var(--glass-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.glass-card:hover {
+.plasma-card:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-hover);
+  box-shadow: var(--glow-accent);
 }
 
-/* Custom modern scrollbars */
+/* Custom Linux scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -95,10 +96,6 @@
   border-radius: 9999px;
 }
 
-[data-theme='light'] ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
-}
-
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.22);
 }

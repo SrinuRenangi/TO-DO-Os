@@ -1,9 +1,12 @@
 // ============================================================================
-// Personal OS — Core Shared Domain Models & Types
+// Personal OS — Core Shared Domain Models & Types (Pure Deterministic)
+// Zero AI / LLM Dependencies. 100% Reliable Desktop Types.
 // ============================================================================
 
 export type Priority = 'P0' | 'P1' | 'P2' | 'P3';
 export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'canceled';
+export type TaskCategory = 'Engineering' | 'Product' | 'Strategy' | 'Personal' | 'Admin';
+export type RecurringPattern = 'none' | 'daily' | 'weekdays' | 'weekly' | 'monthly';
 
 export interface Subtask {
   id: string;
@@ -20,8 +23,10 @@ export interface Task {
   description?: string;
   priority: Priority;
   status: TaskStatus;
-  dueDate?: string; // ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS
+  category: TaskCategory;
+  dueDate?: string; // YYYY-MM-DD
   dueTime?: string; // HH:MM
+  recurring: RecurringPattern;
   estimatedMinutes?: number;
   actualMinutes?: number;
   tags: string[];
@@ -56,12 +61,12 @@ export interface Habit {
   targetDaysPerWeek: number;
   currentStreak: number;
   longestStreak: number;
-  completedDates: string[]; // YYYY-MM-DD array
+  completedDates: string[]; // YYYY-MM-DD
   createdAt: string;
   updatedAt: string;
 }
 
-export type FocusMode = 'pomodoro' | 'deep_work' | 'ultradian' | 'stopwatch';
+export type FocusMode = 'pomodoro' | 'deep_work' | 'ultradian' | 'stopwatch' | 'countdown';
 export type SoundType = 'none' | 'rain' | 'whitenoise' | 'gamma40hz' | 'stream';
 
 export interface FocusSession {
@@ -75,6 +80,13 @@ export interface FocusSession {
   startedAt: string;
   endedAt?: string;
   soundType: SoundType;
+}
+
+export interface NoteTemplate {
+  id: string;
+  name: string;
+  description: string;
+  content: string;
 }
 
 export interface Note {
@@ -92,8 +104,9 @@ export interface CalendarEvent {
   id: string;
   title: string;
   description?: string;
-  startTime: string; // ISO or HH:MM
-  endTime: string;   // ISO or HH:MM
+  startTime: string; // HH:MM or ISO
+  endTime: string;   // HH:MM or ISO
+  date: string;      // YYYY-MM-DD
   isAllDay: boolean;
   category: 'event' | 'timeblock' | 'meeting' | 'reminder';
   color: string;
@@ -105,10 +118,19 @@ export interface Reminder {
   id: string;
   taskId?: string;
   title: string;
-  triggerTime: string;
+  triggerTime: string; // ISO
+  dueTimeFormatted: string; // e.g. "6:00 PM"
   isTriggered: boolean;
   isSnoozed: boolean;
   snoozeUntil?: string;
+  urgency: 'normal' | 'urgent' | 'critical';
+}
+
+export interface Milestone {
+  id: string;
+  title: string;
+  completed: boolean;
+  dueDate: string;
 }
 
 export interface Goal {
@@ -118,24 +140,16 @@ export interface Goal {
   progress: number; // 0-100
   targetDate: string;
   status: 'on_track' | 'at_risk' | 'behind' | 'achieved';
+  milestones: Milestone[];
 }
 
 export type AppModuleId =
   | 'dashboard'
   | 'tasks'
-  | 'notes'
-  | 'habits'
-  | 'goals'
-  | 'focus'
   | 'calendar'
   | 'reminders'
-  | 'analytics'
-  | 'notifications'
-  | 'calculator'
-  | 'quick-capture'
-  | 'command-palette'
-  | 'ai'
-  | 'tray'
+  | 'notes'
+  | 'timer'
   | 'settings';
 
 export interface AppModuleMeta {
