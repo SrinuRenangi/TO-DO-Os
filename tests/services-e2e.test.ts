@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { databaseService } from '../src/services/database/database-service';
 import { taskService } from '../src/services/tasks/task-service';
 import { reminderService } from '../src/services/reminders/reminder-service';
-import { schedulerService } from '../src/services/scheduler/scheduler-service';
 import { timerService } from '../src/services/timer/timer-service';
 import { notesService } from '../src/services/notes/notes-service';
 import { calendarService } from '../src/services/calendar/calendar-service';

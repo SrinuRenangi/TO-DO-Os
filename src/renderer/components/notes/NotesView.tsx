@@ -1,14 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import {
   FileText,
   Plus,
   Search,
-  Folder,
   Pin,
   Trash2,
   Check,
-  MoreHorizontal,
   Bold,
   Italic,
   Underline,
@@ -16,32 +14,62 @@ import {
   Code,
   List,
   ListOrdered,
-  Link2,
-  Undo2,
-  Redo2,
-  Sparkles,
   Heading,
   Eye,
   Edit3,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useNotesStore } from '@/stores/useNotesStore';
-import { Note } from '@shared/types';
 
 export const NotesView: React.FC = () => {
-  const { notes, selectedNoteId, selectNote, createNote, updateNote, deleteNote, togglePinNote } = useNotesStore();
+  const {
+    notes,
+    selectedNoteId,
+    selectNote,
+    createNote,
+    updateNote,
+    deleteNote,
+    togglePinNote,
+    toggleShowOnDashboard,
+    refreshNotes,
+  } = useNotesStore();
 
   const [activeFilter, setActiveFilter] = useState<'All' | 'Pinned' | 'Architecture' | 'Engineering' | 'Personal'>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [editorContent, setEditorContent] = useState('');
-  const [editorTitle, setEditorTitle] = useState('');
   const [saveIndicator, setSaveIndicator] = useState('All changes saved');
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Refresh notes from storage/SQLite upon entering Notes view
+  useEffect(() => {
+    refreshNotes();
+  }, [refreshNotes]);
+
+  // Safely locate active note
   const activeNote = notes.find((n) => n.id === selectedNoteId) || notes[0];
 
+  const [editorContent, setEditorContent] = useState(activeNote?.content || '');
+  const [editorTitle, setEditorTitle] = useState(activeNote?.title || '');
+
+  // Synchronize editor buffer whenever active note changes
   useEffect(() => {
     if (activeNote) {
-      setEditorContent(activeNote.content);
-      setEditorTitle(activeNote.title);
+      setEditorContent(activeNote.content || '');
+      setEditorTitle(activeNote.title || '');
+
+      // Ensure active filter doesn't hide the selected note
+      if (activeFilter !== 'All') {
+        if (activeFilter === 'Pinned' && !activeNote.pinned) {
+          setActiveFilter('All');
+        } else if (activeFilter !== 'Pinned' && activeFilter !== activeNote.folder) {
+          setActiveFilter('All');
+        }
+      }
+
+      // Auto-focus editor textarea for instant note interaction
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 60);
     }
   }, [activeNote?.id]);
 
@@ -67,7 +95,7 @@ export const NotesView: React.FC = () => {
   };
 
   const insertFormatting = (prefix: string, suffix: string = '') => {
-    const textarea = document.getElementById('note-raw-textarea') as HTMLTextAreaElement;
+    const textarea = textareaRef.current || (document.getElementById('note-raw-textarea') as HTMLTextAreaElement);
     if (!textarea) return;
 
     const start = textarea.selectionStart;
@@ -81,19 +109,20 @@ export const NotesView: React.FC = () => {
   };
 
   const filteredNotes = notes.filter((n) => {
+    if (!n) return false;
     const matchesFilter =
       activeFilter === 'All'
         ? true
         : activeFilter === 'Pinned'
-        ? n.pinned
+        ? Boolean(n.pinned)
         : n.folder === activeFilter;
-    const matchesQuery =
-      n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      n.content.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesQuery;
+    const q = (searchQuery || '').toLowerCase();
+    const titleMatch = (n.title || '').toLowerCase().includes(q);
+    const contentMatch = (n.content || '').toLowerCase().includes(q);
+    return matchesFilter && (titleMatch || contentMatch);
   });
 
-  const wordCount = editorContent.trim().split(/\s+/).filter(Boolean).length;
+  const wordCount = (editorContent || '').trim().split(/\s+/).filter(Boolean).length;
 
   return (
     <div className="max-w-[1460px] mx-auto space-y-5">
@@ -174,198 +203,264 @@ export const NotesView: React.FC = () => {
 
           {/* Notes List */}
           <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
-            {filteredNotes.map((note) => {
-              const isSelected = activeNote?.id === note.id;
-              return (
-                <motion.div
-                  key={note.id}
-                  layout
-                  whileHover={{ scale: 1.02, x: 2 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => selectNote(note.id)}
-                  className={`p-3 rounded-2xl border transition-all cursor-pointer space-y-1.5 ${
-                    isSelected
-                      ? 'border-purple-400 bg-purple-50/60 shadow-2xs border-l-4 border-l-purple-600'
-                      : 'border-slate-200 bg-white hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-extrabold text-slate-950 text-xs truncate flex-1">{note.title}</h4>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          togglePinNote(note.id);
-                        }}
-                        className={`p-1 rounded hover:bg-white/80 ${
-                          note.pinned ? 'text-amber-500' : 'text-slate-300 hover:text-slate-600'
-                        }`}
-                        title={note.pinned ? 'Unpin' : 'Pin Note'}
-                      >
-                        <Pin className="w-3 h-3 fill-current" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteNote(note.id);
-                        }}
-                        className="p-1 rounded text-slate-300 hover:text-rose-600 hover:bg-white/80"
-                        title="Delete Note"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+            {filteredNotes.length === 0 ? (
+              <div className="text-center py-8 text-slate-500 text-xs">
+                <FileText className="w-6 h-6 mx-auto mb-2 text-slate-300" />
+                <p className="font-bold text-slate-700">No notes found</p>
+                <p className="text-[11px] text-slate-500 mt-1">Create a note to start writing.</p>
+              </div>
+            ) : (
+              filteredNotes.map((note) => {
+                const isSelected = activeNote?.id === note.id;
+                const isDashboard = note.showOnDashboard !== undefined ? note.showOnDashboard : note.pinned;
+                return (
+                  <motion.div
+                    key={note.id}
+                    layout
+                    whileHover={{ scale: 1.02, x: 2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => selectNote(note.id)}
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer space-y-1.5 ${
+                      isSelected
+                        ? 'border-purple-400 bg-purple-50/60 shadow-2xs border-l-4 border-l-purple-600'
+                        : 'border-slate-200 bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-extrabold text-slate-950 text-xs truncate flex-1">{note.title || 'Untitled Note'}</h4>
+                      <div className="flex items-center gap-1">
+                        {/* Toggle Show on Dashboard */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleShowOnDashboard(note.id);
+                          }}
+                          className={`p-1 rounded hover:bg-white/80 ${
+                            isDashboard ? 'text-blue-600' : 'text-slate-300 hover:text-slate-600'
+                          }`}
+                          title={isDashboard ? 'On Dashboard (Click to hide)' : 'Show on Dashboard'}
+                        >
+                          <LayoutDashboard className="w-3 h-3 fill-current" />
+                        </button>
+                        {/* Toggle Pin */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePinNote(note.id);
+                          }}
+                          className={`p-1 rounded hover:bg-white/80 ${
+                            note.pinned ? 'text-amber-500' : 'text-slate-300 hover:text-slate-600'
+                          }`}
+                          title={note.pinned ? 'Unpin' : 'Pin Note'}
+                        >
+                          <Pin className="w-3 h-3 fill-current" />
+                        </button>
+                        {/* Delete Note */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteNote(note.id);
+                          }}
+                          className="p-1 rounded text-slate-300 hover:text-rose-600 hover:bg-white/80"
+                          title="Delete Note"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed font-medium">
-                    {note.content.replace(/^#+\s/g, '').slice(0, 95)}...
-                  </p>
+                    <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed font-medium">
+                      {(note.content || '').replace(/^#+\s/g, '').slice(0, 95)}...
+                    </p>
 
-                  <div className="flex items-center justify-between pt-1 text-[10px] text-slate-500 font-bold">
-                    <span className="px-2 py-0.2 rounded-full bg-slate-100 text-slate-700">
-                      {note.folder || 'General'}
-                    </span>
-                    <span>{new Date(note.updatedAt).toLocaleDateString()}</span>
-                  </div>
-                </motion.div>
-              );
-            })}
+                    <div className="flex items-center justify-between pt-1 text-[10px] text-slate-500 font-bold">
+                      <div className="flex items-center gap-1">
+                        <span className="px-2 py-0.2 rounded-full bg-slate-100 text-slate-700">
+                          {note.folder || 'General'}
+                        </span>
+                        {isDashboard && (
+                          <span className="px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-700 text-[9px] font-black">
+                            Dashboard
+                          </span>
+                        )}
+                      </div>
+                      <span>{new Date(note.updatedAt).toLocaleDateString()}</span>
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
           </div>
         </div>
 
         {/* PANEL 2: ACTIVE NOTES EDITOR (Markdown & Live Preview) (col-span-6) */}
         <div className="lg:col-span-6 studio-panel p-5 space-y-3.5">
-          {/* Title Header with Inline Title Edit */}
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-            <input
-              type="text"
-              value={editorTitle}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              className="text-base font-black text-slate-950 bg-transparent border-none focus:outline-none flex-1"
-              placeholder="Note Title..."
-            />
-            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
-              <Check className="w-3 h-3 stroke-[3]" />
-              <span>{saveIndicator}</span>
-            </span>
-          </div>
+          {activeNote ? (
+            <>
+              {/* Title Header with Inline Title Edit & Dashboard Control */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200 gap-2">
+                <input
+                  type="text"
+                  value={editorTitle}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  className="text-base font-black text-slate-950 bg-transparent border-none focus:outline-none flex-1"
+                  placeholder="Note Title..."
+                />
+                
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Show On Dashboard Toggle */}
+                  <button
+                    onClick={() => toggleShowOnDashboard(activeNote.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all border ${
+                      (activeNote.showOnDashboard !== undefined ? activeNote.showOnDashboard : activeNote.pinned)
+                        ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
+                        : 'bg-slate-50 text-slate-500 border-slate-200 hover:text-slate-800'
+                    }`}
+                    title="Toggle note visibility on Dashboard"
+                  >
+                    <LayoutDashboard className="w-3 h-3" />
+                    <span>{(activeNote.showOnDashboard !== undefined ? activeNote.showOnDashboard : activeNote.pinned) ? 'On Dashboard' : 'Show on Dashboard'}</span>
+                  </button>
 
-          {/* Formatting Toolbar */}
-          <div className="flex items-center gap-1 p-1.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-700 text-xs flex-wrap">
-            <button
-              onClick={() => insertFormatting('**', '**')}
-              className="p-1.5 hover:bg-white rounded-lg font-black transition-colors"
-              title="Bold"
-            >
-              <Bold className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => insertFormatting('*', '*')}
-              className="p-1.5 hover:bg-white rounded-lg italic transition-colors"
-              title="Italic"
-            >
-              <Italic className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => insertFormatting('<u>', '</u>')}
-              className="p-1.5 hover:bg-white rounded-lg underline transition-colors"
-              title="Underline"
-            >
-              <Underline className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => insertFormatting('~~', '~~')}
-              className="p-1.5 hover:bg-white rounded-lg line-through transition-colors"
-              title="Strikethrough"
-            >
-              <Strikethrough className="w-3.5 h-3.5" />
-            </button>
-            <span className="w-[1px] h-4 bg-slate-300 mx-1" />
-            <button
-              onClick={() => insertFormatting('### ')}
-              className="p-1.5 hover:bg-white rounded-lg font-black transition-colors"
-              title="Heading"
-            >
-              <Heading className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => insertFormatting('`', '`')}
-              className="p-1.5 hover:bg-white rounded-lg font-mono transition-colors"
-              title="Inline Code"
-            >
-              <Code className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => insertFormatting('- ')}
-              className="p-1.5 hover:bg-white rounded-lg transition-colors"
-              title="Bullet List"
-            >
-              <List className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => insertFormatting('1. ')}
-              className="p-1.5 hover:bg-white rounded-lg transition-colors"
-              title="Numbered List"
-            >
-              <ListOrdered className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Split View: Left Raw Markdown | Right Live Preview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[380px] text-xs">
-            {/* Raw Markdown Editor */}
-            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col font-mono text-[11px]">
-              <div className="text-[10px] font-bold text-slate-500 uppercase pb-1.5 mb-1.5 border-b border-slate-200 flex items-center gap-1">
-                <Edit3 className="w-3 h-3" />
-                <span>Markdown Input</span>
+                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                    <Check className="w-3 h-3 stroke-[3]" />
+                    <span>{saveIndicator}</span>
+                  </span>
+                </div>
               </div>
-              <textarea
-                id="note-raw-textarea"
-                value={editorContent}
-                onChange={(e) => handleContentChange(e.target.value)}
-                placeholder="Write markdown content here..."
-                className="w-full flex-1 bg-transparent outline-none resize-none leading-relaxed text-slate-900 font-mono text-xs"
-              />
+
+              {/* Formatting Toolbar */}
+              <div className="flex items-center gap-1 p-1.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-700 text-xs flex-wrap">
+                <button
+                  onClick={() => insertFormatting('**', '**')}
+                  className="p-1.5 hover:bg-white rounded-lg font-black transition-colors"
+                  title="Bold"
+                >
+                  <Bold className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => insertFormatting('*', '*')}
+                  className="p-1.5 hover:bg-white rounded-lg italic transition-colors"
+                  title="Italic"
+                >
+                  <Italic className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => insertFormatting('<u>', '</u>')}
+                  className="p-1.5 hover:bg-white rounded-lg underline transition-colors"
+                  title="Underline"
+                >
+                  <Underline className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => insertFormatting('~~', '~~')}
+                  className="p-1.5 hover:bg-white rounded-lg line-through transition-colors"
+                  title="Strikethrough"
+                >
+                  <Strikethrough className="w-3.5 h-3.5" />
+                </button>
+                <span className="w-[1px] h-4 bg-slate-300 mx-1" />
+                <button
+                  onClick={() => insertFormatting('### ')}
+                  className="p-1.5 hover:bg-white rounded-lg font-black transition-colors"
+                  title="Heading"
+                >
+                  <Heading className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => insertFormatting('`', '`')}
+                  className="p-1.5 hover:bg-white rounded-lg font-mono transition-colors"
+                  title="Inline Code"
+                >
+                  <Code className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => insertFormatting('- ')}
+                  className="p-1.5 hover:bg-white rounded-lg transition-colors"
+                  title="Bullet List"
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => insertFormatting('1. ')}
+                  className="p-1.5 hover:bg-white rounded-lg transition-colors"
+                  title="Numbered List"
+                >
+                  <ListOrdered className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Split View: Left Raw Markdown | Right Live Preview */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[380px] text-xs">
+                {/* Raw Markdown Editor */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col font-mono text-[11px]">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase pb-1.5 mb-1.5 border-b border-slate-200 flex items-center gap-1">
+                    <Edit3 className="w-3 h-3" />
+                    <span>Markdown Input</span>
+                  </div>
+                  <textarea
+                    ref={textareaRef}
+                    id="note-raw-textarea"
+                    value={editorContent}
+                    onChange={(e) => handleContentChange(e.target.value)}
+                    placeholder="Write markdown content here..."
+                    className="w-full flex-1 bg-transparent outline-none resize-none leading-relaxed text-slate-900 font-mono text-xs"
+                  />
+                </div>
+
+                {/* Rendered Live Preview */}
+                <div className="p-3.5 bg-white border border-slate-200 rounded-2xl overflow-y-auto space-y-2 text-xs leading-relaxed text-slate-800">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase pb-1.5 mb-1.5 border-b border-slate-200 flex items-center gap-1">
+                    <Eye className="w-3 h-3" />
+                    <span>Live Rendered Preview</span>
+                  </div>
+                  <div className="prose prose-sm max-w-none space-y-2 text-slate-800">
+                    {(editorContent || '').split('\n\n').map((block, idx) => {
+                      if (!block) return null;
+                      if (block.startsWith('# ')) {
+                        return <h1 key={idx} className="text-base font-black text-slate-950">{block.replace('# ', '')}</h1>;
+                      }
+                      if (block.startsWith('## ')) {
+                        return <h2 key={idx} className="text-sm font-extrabold text-slate-950">{block.replace('## ', '')}</h2>;
+                      }
+                      if (block.startsWith('### ')) {
+                        return <h3 key={idx} className="text-xs font-bold text-slate-950">{block.replace('### ', '')}</h3>;
+                      }
+                      if (block.startsWith('- ')) {
+                        return (
+                          <ul key={idx} className="list-disc pl-4 space-y-0.5 text-slate-700">
+                            {block.split('\n').map((li, i) => (
+                              <li key={i}>{li.replace('- ', '')}</li>
+                            ))}
+                          </ul>
+                        );
+                      }
+                      if (block.startsWith('```')) {
+                        return (
+                          <pre key={idx} className="p-2.5 rounded-xl bg-slate-100 text-slate-900 font-mono text-[11px] overflow-x-auto">
+                            {block.replace(/```[a-z]*/g, '').trim()}
+                          </pre>
+                        );
+                      }
+                      return <p key={idx} className="text-slate-700 font-medium">{block}</p>;
+                    })}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-16 text-slate-500">
+              <FileText className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+              <h3 className="text-sm font-bold text-slate-800">No Note Selected</h3>
+              <p className="text-xs text-slate-500 mt-1">Select an existing note or click Add Note to begin.</p>
+              <button
+                onClick={handleCreateNew}
+                className="mt-4 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700"
+              >
+                Create Note
+              </button>
             </div>
-
-            {/* Rendered Live Preview */}
-            <div className="p-3.5 bg-white border border-slate-200 rounded-2xl overflow-y-auto space-y-2 text-xs leading-relaxed text-slate-800">
-              <div className="text-[10px] font-bold text-slate-500 uppercase pb-1.5 mb-1.5 border-b border-slate-200 flex items-center gap-1">
-                <Eye className="w-3 h-3" />
-                <span>Live Rendered Preview</span>
-              </div>
-              <div className="prose prose-sm max-w-none space-y-2 text-slate-800">
-                {editorContent.split('\n\n').map((block, idx) => {
-                  if (block.startsWith('# ')) {
-                    return <h1 key={idx} className="text-base font-black text-slate-950">{block.replace('# ', '')}</h1>;
-                  }
-                  if (block.startsWith('## ')) {
-                    return <h2 key={idx} className="text-sm font-extrabold text-slate-950">{block.replace('## ', '')}</h2>;
-                  }
-                  if (block.startsWith('### ')) {
-                    return <h3 key={idx} className="text-xs font-bold text-slate-950">{block.replace('### ', '')}</h3>;
-                  }
-                  if (block.startsWith('- ')) {
-                    return (
-                      <ul key={idx} className="list-disc pl-4 space-y-0.5 text-slate-700">
-                        {block.split('\n').map((li, i) => (
-                          <li key={i}>{li.replace('- ', '')}</li>
-                        ))}
-                      </ul>
-                    );
-                  }
-                  if (block.startsWith('```')) {
-                    return (
-                      <pre key={idx} className="p-2.5 rounded-xl bg-slate-100 text-slate-900 font-mono text-[11px] overflow-x-auto">
-                        {block.replace(/```[a-z]*/g, '').trim()}
-                      </pre>
-                    );
-                  }
-                  return <p key={idx} className="text-slate-700 font-medium">{block}</p>;
-                })}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* PANEL 3: NOTES DETAILS & INTEGRATIONS (col-span-3) */}
@@ -376,8 +471,8 @@ export const NotesView: React.FC = () => {
             </h3>
           </div>
 
-          {activeNote && (
-            <div className="space-y-2 text-xs text-slate-700">
+          {activeNote ? (
+            <div className="space-y-2.5 text-xs text-slate-700">
               <div className="flex items-center justify-between">
                 <span>Created:</span>
                 <span className="font-bold text-slate-900">{new Date(activeNote.createdAt).toLocaleDateString()}</span>
@@ -396,7 +491,19 @@ export const NotesView: React.FC = () => {
                   {activeNote.folder || 'Engineering'}
                 </span>
               </div>
+              <div className="flex items-center justify-between">
+                <span>Dashboard View:</span>
+                <span className={`font-bold px-2 py-0.5 rounded-md ${
+                  (activeNote.showOnDashboard !== undefined ? activeNote.showOnDashboard : activeNote.pinned)
+                    ? 'text-emerald-700 bg-emerald-100'
+                    : 'text-slate-500 bg-slate-100'
+                }`}>
+                  {(activeNote.showOnDashboard !== undefined ? activeNote.showOnDashboard : activeNote.pinned) ? 'Enabled' : 'Disabled'}
+                </span>
+              </div>
             </div>
+          ) : (
+            <p className="text-slate-400 text-xs">Select a note to inspect metadata.</p>
           )}
 
           <div className="pt-3 border-t border-slate-200 space-y-2">
@@ -413,8 +520,10 @@ export const NotesView: React.FC = () => {
 
       {/* Footer Status Bar */}
       <div className="pt-4 border-t border-slate-300 flex items-center justify-between text-xs text-slate-800 font-bold">
-        <span>Total Notes: {notes.length} | Pinned: {notes.filter((n) => n.pinned).length} | Storage: SQLite Offline WAL</span>
-        <span className="text-slate-700 font-mono text-[11px] font-extrabold">* No fake metrics</span>
+        <span>
+          Total Notes: {notes.length} | Pinned: {notes.filter((n) => n.pinned).length} | On Dashboard: {notes.filter((n) => n.showOnDashboard !== undefined ? n.showOnDashboard : n.pinned).length} | Storage: SQLite Offline WAL
+        </span>
+        <span className="text-slate-700 font-mono text-[11px] font-extrabold">* 100% Offline Durability</span>
       </div>
     </div>
   );

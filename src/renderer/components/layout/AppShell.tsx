@@ -9,14 +9,15 @@ import {
   Timer,
   Settings,
   Search,
-  LogOut,
   CalendarDays,
+  User,
 } from 'lucide-react';
 import { useAppStore, MODULE_REGISTRY } from '@/stores/useAppStore';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { CommandPalette } from './CommandPalette';
 import { QuickCaptureModal } from './QuickCaptureModal';
+import { ReminderAlertModal } from '@/components/reminders/ReminderAlertModal';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -99,8 +100,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
           {/* User Profile Avatar */}
           <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-200 to-amber-400 border border-amber-300 shadow-xs flex items-center justify-center overflow-hidden">
-              <span className="text-[11px] font-bold text-amber-900">SO</span>
+            <div className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-300 shadow-2xs flex items-center justify-center text-slate-700 transition-colors">
+              <User className="w-3.5 h-3.5" />
             </div>
           </div>
         </div>
@@ -135,14 +136,14 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
           {/* Sidebar Footer Readouts */}
           <div className="w-full px-2 pt-3 border-t border-slate-300/70 text-center space-y-1">
-            <div className="text-[9px] font-mono text-slate-500 font-semibold leading-tight">Data: 10%</div>
-            <div className="text-[9px] font-mono text-slate-500 font-semibold leading-tight">Data: 22:08</div>
+            <div className="text-[9px] font-mono text-slate-500 font-semibold leading-tight">SQLite WAL</div>
+            <div className="text-[9px] font-mono text-emerald-600 font-semibold leading-tight">● 24/7 Active</div>
             <button
               onClick={() => setActiveModule('settings')}
               className="mt-1 p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-black/5 transition-colors"
-              title="System Exit / Settings"
+              title="System Settings"
             >
-              <LogOut className="w-3.5 h-3.5 mx-auto rotate-180" />
+              <Settings className="w-3.5 h-3.5 mx-auto" />
             </button>
           </div>
         </aside>
@@ -156,6 +157,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       {/* Global Modals */}
       <CommandPalette />
       <QuickCaptureModal />
+      <ReminderAlertModal />
     </div>
   );
 };

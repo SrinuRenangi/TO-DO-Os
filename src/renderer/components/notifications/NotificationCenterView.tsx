@@ -1,30 +1,20 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Bell,
   Clock,
   Volume2,
-  VolumeX,
   Plus,
-  MoreHorizontal,
   Check,
-  ChevronDown,
   Trash2,
-  Sliders,
   CheckCircle2,
   Circle,
   Flame,
   Zap,
   Target,
-  Leaf,
-  ShieldCheck,
-  Calendar,
-  Sparkles,
-  X,
 } from 'lucide-react';
 import { useReminderStore } from '@/stores/useReminderStore';
 import { useNotificationStore } from '@/stores/useNotificationStore';
-import { soundSynth } from '@/lib/sound-synth';
 import { formatRelativeTime } from '@/lib/utils';
 
 export const NotificationCenterView: React.FC = () => {

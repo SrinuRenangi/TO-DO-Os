@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { useNotesStore } from '../src/renderer/stores/useNotesStore';
 import { useReminderStore } from '../src/renderer/stores/useReminderStore';
 import { useTaskStore } from '../src/renderer/stores/useTaskStore';
-import { useAppStore, MODULE_REGISTRY } from '../src/renderer/stores/useAppStore';
+import { MODULE_REGISTRY } from '../src/renderer/stores/useAppStore';
 
 describe('Deterministic Productivity System (Zero-AI & 7 Core Modules Mandate)', () => {
   it('enforces exactly 7 core modules and zero AI components in app registry', () => {
@@ -67,6 +67,7 @@ describe('Deterministic Productivity System (Zero-AI & 7 Core Modules Mandate)',
       '2026-09-26',
       '18:00',
       'daily',
+      undefined,
       ['#kernel']
     );
 

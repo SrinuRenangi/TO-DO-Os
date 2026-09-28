@@ -1,22 +1,64 @@
 {
-  "name": "to-do",
+  "name": "personal-organizer",
+  "productName": "Personal Organizer",
   "version": "1.0.0",
-  "description": "",
+  "description": "Industrial-Grade Personal OS with SQLite WAL Durability & 24/7 Desktop Companion",
   "main": "electron-main.cjs",
+  "author": "Personal OS Team",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "start": "electron electron-main.cjs",
     "desktop": "electron electron-main.cjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "package": "npm run build && electron-builder --win",
+    "package:dir": "npm run build && electron-builder --dir"
   },
-  "keywords": [],
-  "author": "",
+  "build": {
+    "appId": "com.personal.organizer",
+    "productName": "Personal Organizer",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron-main.cjs",
+      "preload.cjs",
+      "src/app/database/**/*",
+      "src/app/notifications/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "assets/icon.svg",
+      "publisherName": "Personal OS Team"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Personal Organizer"
+    }
+  },
+  "keywords": [
+    "personal-os",
+    "tasks",
+    "reminders",
+    "calendar",
+    "notes",
+    "sqlite-wal"
+  ],
   "license": "ISC",
   "type": "module",
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
-    "better-sqlite3": "^13.0.3",
+    "better-sqlite3": "^11.8.1",
     "electron": "^30.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

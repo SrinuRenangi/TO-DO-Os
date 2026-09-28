@@ -4,7 +4,7 @@
 // ============================================================================
 
 import { databaseService } from '../database/database-service';
-import { ReminderEntity } from '../database/types';
+import { ReminderEntity, RecurringPattern } from '../database/types';
 import { generateId } from '@/lib/utils';
 import { notificationService } from '../notifications/notification-service';
 
@@ -95,10 +95,51 @@ export class ReminderService {
         };
         databaseService.saveReminder(triggeredReminder);
         dueReminders.push(triggeredReminder);
+
+        // If reminder is linked to a recurring task, schedule the next recurring reminder instance
+        if (reminder.taskId) {
+          const task = databaseService.getTasks().find((t) => t.id === reminder.taskId);
+          if (task && task.recurring && task.recurring !== 'none') {
+            const nextDate = this.calculateNextRecurrenceDate(reminder.triggerTime, task.recurring);
+            if (nextDate) {
+              const nextReminder: ReminderEntity = {
+                id: generateId('rem'),
+                taskId: task.id,
+                title: reminder.title,
+                triggerTime: nextDate.toISOString(),
+                dueTimeFormatted: reminder.dueTimeFormatted,
+                isTriggered: false,
+                isSnoozed: false,
+                urgency: reminder.urgency,
+                createdAt: new Date().toISOString(),
+              };
+              databaseService.saveReminder(nextReminder);
+              console.log(`[ReminderService] Scheduled next recurring reminder for task ${task.id} at ${nextDate.toISOString()}`);
+            }
+          }
+        }
       }
     }
 
     return dueReminders;
+  }
+
+  private calculateNextRecurrenceDate(isoString: string, pattern: RecurringPattern): Date | null {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return null;
+    if (pattern === 'daily') {
+      d.setDate(d.getDate() + 1);
+    } else if (pattern === 'weekdays') {
+      const day = d.getDay();
+      d.setDate(d.getDate() + (day === 5 ? 3 : day === 6 ? 2 : 1));
+    } else if (pattern === 'weekly') {
+      d.setDate(d.getDate() + 7);
+    } else if (pattern === 'monthly') {
+      d.setMonth(d.getMonth() + 1);
+    } else {
+      return null;
+    }
+    return d;
   }
 }
 

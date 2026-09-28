@@ -1,15 +1,24 @@
 import { create } from 'zustand';
-import { Task, Priority, TaskStatus, TaskCategory, RecurringPattern, Subtask } from '@shared/types';
-import { taskService } from '@/services/tasks/task-service';
+import { Task, Priority, TaskStatus, TaskCategory, RecurringPattern } from '@shared/types';
+import { taskService, parseTaskCategory } from '@/services/tasks/task-service';
 import { TaskEntity } from '@/services/database/types';
+
+export type TaskSortField = 'dueDate' | 'priority' | 'title' | 'createdAt';
+export type TaskSortOrder = 'asc' | 'desc';
+export type TaskDateFilter = 'all' | 'today' | 'overdue' | 'upcoming';
 
 interface TaskState {
   tasks: Task[];
   filterPriority: Priority | 'ALL';
   filterStatus: TaskStatus | 'ALL';
   filterCategory: TaskCategory | 'ALL';
+  dateFilter: TaskDateFilter;
+  sortBy: TaskSortField;
+  sortOrder: TaskSortOrder;
   viewMode: 'list' | 'kanban';
   searchQuery: string;
+  selectedTaskId: string | null;
+  editingTaskId: string | null;
 
   // Actions
   refreshTasks: () => void;
@@ -20,29 +29,44 @@ interface TaskState {
     dueDate?: string,
     dueTime?: string,
     recurring?: RecurringPattern,
+    description?: string,
     tags?: string[],
-    estimatedMinutes?: number
+    estimatedMinutes?: number,
+    reminderUrgency?: 'normal' | 'urgent' | 'critical',
+    reminderEnabled?: boolean
   ) => Task;
   toggleTaskStatus: (id: string) => void;
   deleteTask: (id: string) => void;
-  updateTask: (id: string, updates: Partial<Task>) => void;
+  updateTask: (
+    id: string,
+    updates: Partial<Task> & {
+      reminderUrgency?: 'normal' | 'urgent' | 'critical';
+      reminderEnabled?: boolean;
+    }
+  ) => void;
   addSubtask: (taskId: string, title: string) => void;
   toggleSubtask: (taskId: string, subtaskId: string) => void;
   setViewMode: (mode: 'list' | 'kanban') => void;
   setFilterPriority: (priority: Priority | 'ALL') => void;
   setFilterStatus: (status: TaskStatus | 'ALL') => void;
   setFilterCategory: (category: TaskCategory | 'ALL') => void;
+  setDateFilter: (filter: TaskDateFilter) => void;
+  setSortBy: (sortBy: TaskSortField) => void;
+  setSortOrder: (sortOrder: TaskSortOrder) => void;
   setSearchQuery: (query: string) => void;
+  setSelectedTaskId: (id: string | null) => void;
+  setEditingTaskId: (id: string | null) => void;
 }
 
 function entityToTask(entity: TaskEntity, index: number): Task {
+  const { category, cleanDescription } = parseTaskCategory(entity.description);
   return {
     id: entity.id,
     title: entity.title,
-    description: entity.description,
+    description: cleanDescription,
     priority: entity.priority,
     status: entity.status === 'completed' ? 'completed' : 'todo',
-    category: 'Engineering',
+    category,
     dueDate: entity.dueDate,
     dueTime: entity.dueTime,
     recurring: entity.recurring,
@@ -69,8 +93,13 @@ function loadTasksFromService(): Task[] {
 export const useTaskStore = create<TaskState>((set, get) => ({
   tasks: loadTasksFromService(),
   filterPriority: 'ALL',
-  filterStatus: 'ALL',
+  filterStatus: 'todo',
   filterCategory: 'ALL',
+  dateFilter: 'today',
+  sortBy: 'dueDate',
+  sortOrder: 'asc',
+  selectedTaskId: null,
+  editingTaskId: null,
   viewMode: 'list',
   searchQuery: '',
 
@@ -85,16 +114,23 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     dueDate,
     dueTime,
     recurring = 'none',
+    description,
     tags = ['#task'],
-    estimatedMinutes
+    estimatedMinutes,
+    reminderUrgency,
+    reminderEnabled
   ) => {
     const today = new Date().toISOString().split('T')[0];
     const createdEntity = taskService.createTask({
       title,
+      description,
       priority,
+      category,
       dueDate: dueDate || today,
       dueTime,
       recurring,
+      reminderUrgency,
+      reminderEnabled,
     });
 
     const tasks = loadTasksFromService();
@@ -117,9 +153,12 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       title: updates.title,
       description: updates.description,
       priority: updates.priority,
+      category: updates.category,
       dueDate: updates.dueDate,
       dueTime: updates.dueTime,
       recurring: updates.recurring,
+      reminderUrgency: updates.reminderUrgency,
+      reminderEnabled: updates.reminderEnabled,
     });
     set({ tasks: loadTasksFromService() });
   },
@@ -138,5 +177,10 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   setFilterPriority: (priority) => set({ filterPriority: priority }),
   setFilterStatus: (status) => set({ filterStatus: status }),
   setFilterCategory: (category) => set({ filterCategory: category }),
+  setDateFilter: (filter) => set({ dateFilter: filter }),
+  setSortBy: (sortBy) => set({ sortBy }),
+  setSortOrder: (sortOrder) => set({ sortOrder }),
   setSearchQuery: (query) => set({ searchQuery: query }),
+  setSelectedTaskId: (id) => set({ selectedTaskId: id }),
+  setEditingTaskId: (id) => set({ editingTaskId: id }),
 }));

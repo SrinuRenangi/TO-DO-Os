@@ -69,6 +69,20 @@ export interface Habit {
 export type FocusMode = 'pomodoro' | 'deep_work' | 'ultradian' | 'stopwatch' | 'countdown';
 export type SoundType = 'none' | 'rain' | 'whitenoise' | 'gamma40hz' | 'stream';
 
+export type ReminderSoundId =
+  | 'bell'
+  | 'crystal'
+  | 'focus'
+  | 'soft_alarm'
+  | 'gentle_chime'
+  | 'digital_alarm'
+  | 'classic_alarm'
+  | 'morning_alarm'
+  | 'deep_gong'
+  | 'task_complete';
+
+export type HeadphoneMode = 'low' | 'normal' | 'strong' | 'very_strong';
+
 export interface FocusSession {
   id: string;
   mode: FocusMode;
@@ -94,6 +108,7 @@ export interface Note {
   title: string;
   content: string;
   pinned: boolean;
+  showOnDashboard?: boolean;
   tags: string[];
   folder: string;
   createdAt: string;
@@ -108,7 +123,7 @@ export interface CalendarEvent {
   endTime: string;   // HH:MM or ISO
   date: string;      // YYYY-MM-DD
   isAllDay: boolean;
-  category: 'event' | 'timeblock' | 'meeting' | 'reminder';
+  category: 'event' | 'timeblock' | 'meeting' | 'appointment' | 'special' | 'conference' | 'reminder';
   color: string;
   location?: string;
   taskId?: string;

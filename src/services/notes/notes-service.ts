@@ -84,6 +84,13 @@ export class NotesService {
     return this.updateNote(id, { pinned: !existing.pinned });
   }
 
+  public toggleShowOnDashboard(id: string): NoteEntity | null {
+    const existing = this.getNoteById(id);
+    if (!existing) return null;
+    const current = existing.showOnDashboard !== undefined ? existing.showOnDashboard : existing.pinned;
+    return this.updateNote(id, { showOnDashboard: !current });
+  }
+
   public deleteNote(id: string): boolean {
     if (this.autosaveTimers.has(id)) {
       clearTimeout(this.autosaveTimers.get(id)!);

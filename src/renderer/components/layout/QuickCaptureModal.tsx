@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Tag, Clock, AlertCircle } from 'lucide-react';
+import { Plus, X, Clock, AlertCircle } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { Priority } from '@shared/types';
@@ -25,7 +25,7 @@ export const QuickCaptureModal: React.FC = () => {
     e.preventDefault();
     if (!title.trim()) return;
 
-    addTask(title.trim(), priority, 'Engineering', undefined, dueTime, 'none', ['#capture']);
+    addTask(title.trim(), priority, 'Engineering', undefined, dueTime, 'none', undefined, ['#capture']);
     setQuickCaptureOpen(false);
   };
 

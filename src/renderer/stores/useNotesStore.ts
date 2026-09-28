@@ -20,6 +20,7 @@ interface NotesState {
   updateNote: (id: string, updates: Partial<Note>) => void;
   deleteNote: (id: string) => void;
   togglePinNote: (id: string) => void;
+  toggleShowOnDashboard: (id: string) => void;
   applyTemplate: (noteId: string, templateId: string) => void;
   setScratchpad: (content: string) => void;
   convertScratchpadToTask: () => void;
@@ -82,8 +83,9 @@ function entityToNote(entity: NoteEntity): Note {
   return {
     id: entity.id,
     title: entity.title,
-    content: entity.content,
+    content: entity.content || '',
     pinned: entity.pinned,
+    showOnDashboard: entity.showOnDashboard !== undefined ? entity.showOnDashboard : entity.pinned,
     folder: entity.folder,
     tags: ['#note'],
     createdAt: entity.createdAt,
@@ -136,6 +138,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       content: updates.content,
       folder: updates.folder,
       pinned: updates.pinned,
+      showOnDashboard: updates.showOnDashboard,
     });
     set((state) => ({
       notes: state.notes.map((n) =>
@@ -158,6 +161,11 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     set({ notes: loadNotes() });
   },
 
+  toggleShowOnDashboard: (id) => {
+    notesService.toggleShowOnDashboard(id);
+    set({ notes: loadNotes() });
+  },
+
   applyTemplate: (noteId, templateId) => {
     const template = get().templates.find((t) => t.id === templateId);
     if (!template) return;
@@ -175,7 +183,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     const firstLine = scratchpad.trim().split('\n')[0].replace(/^[#\-* ]+/, '');
     if (firstLine) {
-      useTaskStore.getState().addTask(firstLine, 'P1', 'Engineering', undefined, undefined, 'none', ['#capture']);
+      useTaskStore.getState().addTask(firstLine, 'P1', 'Engineering', undefined, undefined, 'none', undefined, ['#capture']);
     }
   },
 

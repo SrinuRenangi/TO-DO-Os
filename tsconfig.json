@@ -11,16 +11,16 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "types": ["node", "vite/client"],
     "strict": true,
-    "noUnusedLocals": false,
+    "noUnusedLocals": true,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
     "paths": {
-      "@/services/*": ["src/services/*"],
-      "@services/*": ["src/services/*"],
-      "@/*": ["src/renderer/*"],
-      "@shared/*": ["src/shared/*"]
+      "@/services/*": ["./src/services/*"],
+      "@services/*": ["./src/services/*"],
+      "@/*": ["./src/renderer/*"],
+      "@shared/*": ["./src/shared/*"]
     }
   },
   "include": ["src", "tests"]

@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Command, CheckSquare, Clock, FileText, Sun, Moon, ArrowRight, Zap, Bell, Calendar } from 'lucide-react';
+import { Search, Command, Clock, Sun, Moon, ArrowRight } from 'lucide-react';
 import { useAppStore, MODULE_REGISTRY } from '@/stores/useAppStore';
 import { useFocusStore } from '@/stores/useFocusStore';
-import { useTaskStore } from '@/stores/useTaskStore';
 
 export const CommandPalette: React.FC = () => {
   const { commandPaletteOpen, setCommandPaletteOpen, setActiveModule, toggleTheme, theme } = useAppStore();
   const { startTimer, setMode } = useFocusStore();
-  const { addTask } = useTaskStore();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);

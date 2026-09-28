@@ -48,9 +48,25 @@ export interface NoteEntity {
   title: string;
   content: string;
   pinned: boolean;
+  showOnDashboard?: boolean;
   folder: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type EventCategory = 'meeting' | 'appointment' | 'special' | 'event' | 'conference';
+
+export interface EventEntity {
+  id: string;
+  title: string;
+  description?: string;
+  startTime: string; // ISO 8601 or HH:MM
+  endTime: string;   // ISO 8601 or HH:MM
+  date: string;      // YYYY-MM-DD
+  isAllDay: boolean;
+  category: EventCategory;
+  color?: string;
+  createdAt: string;
 }
 
 export type TimerMode = 'pomodoro' | 'stopwatch' | 'countdown';
@@ -85,6 +101,7 @@ export interface DatabaseSnapshot {
   version: string;
   exportedAt: string;
   tasks: TaskEntity[];
+  events: EventEntity[];
   reminders: ReminderEntity[];
   notes: NoteEntity[];
   timer: TimerEntity;

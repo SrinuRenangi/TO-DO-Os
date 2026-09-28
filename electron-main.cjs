@@ -1,5 +1,9 @@
-const { app, BrowserWindow, shell, Tray, Menu, nativeImage, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, Tray, Menu, nativeImage, ipcMain, powerMonitor } = require('electron');
 const path = require('path');
+const { databaseManager } = require('./src/app/database/database-manager.cjs');
+const { registerDatabaseIpcHandlers } = require('./src/app/database/ipc-handlers.cjs');
+const { mainNotificationService } = require('./src/app/notifications/notification-manager.cjs');
+const { registerNotificationIpcHandlers } = require('./src/app/notifications/ipc-notification-handlers.cjs');
 
 // Ensure Windows recognizes this as a distinct standalone taskbar application
 app.setAppUserModelId('Personal.Organizer.DesktopApp');
@@ -106,6 +110,8 @@ if (!gotTheLock) {
       appIcon = nativeImage.createFromBuffer(iconSvg).resize({ width: 64, height: 64 });
     } catch (e) {}
 
+    const startHidden = process.argv.includes('--hidden') || process.argv.includes('--background-daemon');
+
     mainWindow = new BrowserWindow({
       width: 1460,
       height: 920,
@@ -115,12 +121,14 @@ if (!gotTheLock) {
       icon: appIcon,
       backgroundColor: '#CFD5DE',
       frame: true, // Native Windows OS titlebar & window controls
-      show: true, // Show window immediately on desktop
+      show: !startHidden, // If auto-started with Windows login, start directly in system tray!
       skipTaskbar: false, // Ensures it appears on the Windows Taskbar!
       webPreferences: {
+        preload: path.join(__dirname, 'preload.cjs'),
         nodeIntegration: false,
         contextIsolation: true,
-        sandbox: true,
+        sandbox: false,
+        backgroundThrottling: false, // Ensures scheduler and timers continue running when minimized/hidden in tray
       },
     });
 
@@ -134,8 +142,15 @@ if (!gotTheLock) {
       });
     });
 
-    mainWindow.show();
-    mainWindow.focus();
+    if (!startHidden) {
+      mainWindow.show();
+      mainWindow.focus();
+    } else {
+      console.log('[Personal Organizer] Started silently in background tray mode on Windows login.');
+    }
+
+    // Attach to Notification Manager for Action Center click foregrounding
+    mainNotificationService.setMainWindow(mainWindow);
 
     mainWindow.webContents.setWindowOpenHandler((details) => {
       shell.openExternal(details.url);
@@ -158,12 +173,76 @@ if (!gotTheLock) {
 
     mainWindow.on('closed', () => {
       mainWindow = null;
+      mainNotificationService.setMainWindow(null);
     });
   }
 
   app.whenReady().then(() => {
+    // 1. Initialize SQLite Database Engine & Repository
+    try {
+      databaseManager.initialize(app.getPath('userData'));
+      registerDatabaseIpcHandlers();
+      registerNotificationIpcHandlers();
+    } catch (err) {
+      console.error('[ElectronMain] SQLite/Notification initialization error:', err);
+    }
+
+    // 2. Register Windows Auto-Start on Startup (Background Tray Mode)
+    try {
+      app.setLoginItemSettings({
+        openAtLogin: true,
+        openAsHidden: true,
+        path: process.execPath,
+        args: ['--hidden', '--background-daemon'],
+      });
+      console.log('[Personal Organizer] Registered Windows launch-on-startup in background tray.');
+    } catch (err) {
+      console.warn('[Personal Organizer] AutoStart registration note:', err.message);
+    }
+
+    // Auto-Start IPC Handlers
+    ipcMain.handle('app:autostart:get', async () => {
+      try {
+        return app.getLoginItemSettings().openAtLogin;
+      } catch (e) {
+        return true;
+      }
+    });
+
+    ipcMain.handle('app:autostart:set', async (_event, enable) => {
+      try {
+        app.setLoginItemSettings({
+          openAtLogin: Boolean(enable),
+          openAsHidden: true,
+          path: process.execPath,
+          args: ['--hidden', '--background-daemon'],
+        });
+        return true;
+      } catch (e) {
+        return false;
+      }
+    });
+
     createWindow();
     createTray();
+
+    // Power Monitor: System Sleep/Wake and Screen Unlock detection
+    try {
+      powerMonitor.on('resume', () => {
+        console.log('[Personal Organizer] PowerMonitor: System resumed from sleep. Triggering scheduler catch-up.');
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('system-resumed');
+        }
+      });
+      powerMonitor.on('unlock-screen', () => {
+        console.log('[Personal Organizer] PowerMonitor: Screen unlocked. Triggering scheduler catch-up.');
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('system-resumed');
+        }
+      });
+    } catch (err) {
+      console.warn('[Personal Organizer] PowerMonitor registration note:', err.message);
+    }
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
