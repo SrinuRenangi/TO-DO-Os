@@ -25,173 +25,13 @@ const INITIAL_TIMER: TimerEntity = {
   updatedAt: new Date().toISOString(),
 };
 
-const INITIAL_EVENTS: EventEntity[] = [
-  {
-    id: 'event-1',
-    title: 'Doctor Appointment',
-    description: 'Annual health and wellness routine checkup.',
-    startTime: '14:00',
-    endTime: '15:00',
-    date: new Date().toISOString().split('T')[0],
-    isAllDay: false,
-    category: 'appointment',
-    color: '#8B5CF6',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'event-2',
-    title: 'Strategic Architecture Sync',
-    description: 'Quarterly engineering milestone review and sync.',
-    startTime: '10:00',
-    endTime: '11:30',
-    date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-    isAllDay: false,
-    category: 'meeting',
-    color: '#6366F1',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'event-3',
-    title: 'Product Design Conference',
-    description: 'Keynote presentation and personal systems engineering symposium.',
-    startTime: '09:00',
-    endTime: '17:00',
-    date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
-    isAllDay: true,
-    category: 'conference',
-    color: '#3B82F6',
-    createdAt: new Date().toISOString(),
-  },
-];
+const INITIAL_EVENTS: EventEntity[] = [];
 
-const INITIAL_TASKS: TaskEntity[] = [
-  {
-    id: 'task-1',
-    title: 'Buy Medicine & Prescription Refill',
-    description: 'Ensure critical medication is picked up from pharmacy before closing.',
-    priority: 'P0',
-    status: 'todo',
-    dueDate: new Date().toISOString().split('T')[0],
-    dueTime: '18:00',
-    recurring: 'none',
-    subtasks: [
-      { id: 'sub-1', taskId: 'task-1', title: 'Check doctor prescription', completed: true, createdAt: new Date().toISOString() },
-      { id: 'sub-2', taskId: 'task-1', title: 'Pick up at local pharmacy', completed: false, createdAt: new Date().toISOString() },
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-2',
-    title: 'Linux Control Center System Audit',
-    description: 'Verify 24/7 background scheduler CPU consumption (<0.1%) and memory footprint (<200MB).',
-    priority: 'P1',
-    status: 'todo',
-    dueDate: new Date().toISOString().split('T')[0],
-    dueTime: '15:30',
-    recurring: 'daily',
-    subtasks: [
-      { id: 'sub-3', taskId: 'task-2', title: 'Verify close-to-tray window interception', completed: true, createdAt: new Date().toISOString() },
-      { id: 'sub-4', taskId: 'task-2', title: 'Audit missed reminder wake-up reconciliation', completed: true, createdAt: new Date().toISOString() },
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-daily-1',
-    title: 'Learn Java',
-    description: 'Core language study, concurrency, and virtual thread design patterns.',
-    priority: 'P1',
-    status: 'todo',
-    dueDate: new Date().toISOString().split('T')[0],
-    dueTime: '08:00',
-    recurring: 'daily',
-    subtasks: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-daily-2',
-    title: 'Fine Tuning',
-    description: 'Model weight optimization and offline dataset curation.',
-    priority: 'P1',
-    status: 'todo',
-    dueDate: new Date().toISOString().split('T')[0],
-    dueTime: '17:00',
-    recurring: 'daily',
-    subtasks: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-3',
-    title: 'Weekly Knowledge Base Review & Notes Consolidation',
-    description: 'Review pinned technical notes and organize architecture specifications.',
-    priority: 'P2',
-    status: 'todo',
-    dueDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow
-    dueTime: '11:00',
-    recurring: 'weekly',
-    subtasks: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+const INITIAL_TASKS: TaskEntity[] = [];
 
-const INITIAL_REMINDERS: ReminderEntity[] = [
-  {
-    id: 'rem-1',
-    taskId: 'task-1',
-    title: 'Buy Medicine & Prescription Refill',
-    triggerTime: new Date(new Date().setHours(18, 0, 0, 0)).toISOString(),
-    dueTimeFormatted: '6:00 PM',
-    isTriggered: false,
-    isSnoozed: false,
-    urgency: 'critical',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'rem-2',
-    taskId: 'task-2',
-    title: 'Linux Control Center System Audit',
-    triggerTime: new Date(new Date().setHours(15, 30, 0, 0)).toISOString(),
-    dueTimeFormatted: '3:30 PM',
-    isTriggered: false,
-    isSnoozed: false,
-    urgency: 'urgent',
-    createdAt: new Date().toISOString(),
-  },
-];
+const INITIAL_REMINDERS: ReminderEntity[] = [];
 
-const INITIAL_NOTES: NoteEntity[] = [
-  {
-    id: 'note-1',
-    title: 'Personal OS — Core Reliability Principles',
-    content: `# Personal OS — Core Reliability Principles
-
-1. **Deterministic Execution**: Zero AI, zero stochastic prompts. Pure mathematical reliability.
-2. **24/7 Desktop Companion**: Runs continuously in background system tray.
-3. **Services-First Architecture**: Database -> Service -> Business Logic -> State -> UI.
-4. **Offline First**: All tasks, reminders, notes, and timers function without network access.`,
-    pinned: true,
-    folder: 'Architecture',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'note-2',
-    title: 'System Telemetry & Performance Limits',
-    content: `# System Telemetry Targets
-
-- **Idle RAM**: <200MB (Verified ~112MB)
-- **Idle CPU**: <2% (Scheduler delta timers run at 0.08% CPU)
-- **Startup**: <3s cold boot`,
-    pinned: false,
-    folder: 'Engineering',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+const INITIAL_NOTES: NoteEntity[] = [];
 
 const INITIAL_SETTINGS: Record<string, string> = {
   autoStart: 'true',
@@ -200,32 +40,7 @@ const INITIAL_SETTINGS: Record<string, string> = {
   theme: 'dark',
 };
 
-const INITIAL_NOTIFICATIONS: NotificationEntity[] = [
-  {
-    id: 'notif-1',
-    title: 'Reminder Engine Online',
-    body: '24/7 background scheduler daemon initialized with Web Audio chimes.',
-    urgency: 'urgent',
-    timestamp: new Date(Date.now() - 12 * 60000).toISOString(),
-    isRead: false,
-  },
-  {
-    id: 'notif-2',
-    title: 'Database WAL Snapshot',
-    body: 'SQLite transaction journal persisted cleanly with zero schema errors.',
-    urgency: 'normal',
-    timestamp: new Date(Date.now() - 45 * 60000).toISOString(),
-    isRead: false,
-  },
-  {
-    id: 'notif-3',
-    title: 'Desktop Companion Armed',
-    body: 'Personal Organizer offline desktop environment loaded and ready.',
-    urgency: 'normal',
-    timestamp: new Date(Date.now() - 120 * 60000).toISOString(),
-    isRead: true,
-  },
-];
+const INITIAL_NOTIFICATIONS: NotificationEntity[] = [];
 
 declare global {
   interface Window {
@@ -258,6 +73,7 @@ declare global {
       exportSnapshot: () => Promise<DatabaseSnapshot>;
       restoreSnapshot: (snapshot: DatabaseSnapshot) => Promise<boolean>;
       getInfo: () => Promise<{ type: string; journalMode: string; path: string }>;
+      clearAllUserData?: () => Promise<boolean>;
     };
   }
 }
@@ -296,12 +112,12 @@ export class DatabaseService {
       ]);
 
       this.inMemoryDb = {
-        tasks: tasks && tasks.length > 0 ? tasks : this.inMemoryDb.tasks,
-        reminders: reminders && reminders.length > 0 ? reminders : this.inMemoryDb.reminders,
-        notes: notes && notes.length > 0 ? notes : this.inMemoryDb.notes,
-        events: events && events.length > 0 ? events : this.inMemoryDb.events,
+        tasks: Array.isArray(tasks) ? tasks : this.inMemoryDb.tasks,
+        reminders: Array.isArray(reminders) ? reminders : this.inMemoryDb.reminders,
+        notes: Array.isArray(notes) ? notes : this.inMemoryDb.notes,
+        events: Array.isArray(events) ? events : this.inMemoryDb.events,
         timer: timer || this.inMemoryDb.timer,
-        notifications: notifications && notifications.length > 0 ? notifications : this.inMemoryDb.notifications,
+        notifications: Array.isArray(notifications) ? notifications : this.inMemoryDb.notifications,
         settings: settings && Object.keys(settings).length > 0 ? settings : this.inMemoryDb.settings,
       };
 
@@ -529,6 +345,24 @@ export class DatabaseService {
     return true;
   }
 
+  public clearAllData(): void {
+    this.inMemoryDb = {
+      tasks: [],
+      reminders: [],
+      notes: [],
+      events: [],
+      timer: { ...INITIAL_TIMER },
+      notifications: [],
+      settings: { ...INITIAL_SETTINGS },
+    };
+    this.persistToStorage();
+    if (typeof window !== 'undefined' && window.sqliteDB?.clearAllUserData) {
+      window.sqliteDB.clearAllUserData().catch((err) =>
+        console.warn('[DatabaseService] SQLite clearAllUserData error:', err)
+      );
+    }
+  }
+
   // --- Internal Storage Sync ---
   private loadFromStorage() {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -537,12 +371,12 @@ export class DatabaseService {
         if (raw) {
           const parsed = JSON.parse(raw);
           return {
-            tasks: parsed.tasks || INITIAL_TASKS,
-            reminders: parsed.reminders || INITIAL_REMINDERS,
-            notes: parsed.notes || INITIAL_NOTES,
-            events: parsed.events || INITIAL_EVENTS,
+            tasks: Array.isArray(parsed.tasks) ? parsed.tasks : INITIAL_TASKS,
+            reminders: Array.isArray(parsed.reminders) ? parsed.reminders : INITIAL_REMINDERS,
+            notes: Array.isArray(parsed.notes) ? parsed.notes : INITIAL_NOTES,
+            events: Array.isArray(parsed.events) ? parsed.events : INITIAL_EVENTS,
             timer: parsed.timer || INITIAL_TIMER,
-            notifications: parsed.notifications && parsed.notifications.length > 0 ? parsed.notifications : INITIAL_NOTIFICATIONS,
+            notifications: Array.isArray(parsed.notifications) ? parsed.notifications : INITIAL_NOTIFICATIONS,
             settings: parsed.settings || INITIAL_SETTINGS,
           };
         }
@@ -551,13 +385,13 @@ export class DatabaseService {
       }
     }
     return {
-      tasks: INITIAL_TASKS,
-      reminders: INITIAL_REMINDERS,
-      notes: INITIAL_NOTES,
-      events: INITIAL_EVENTS,
-      timer: INITIAL_TIMER,
-      notifications: INITIAL_NOTIFICATIONS,
-      settings: INITIAL_SETTINGS,
+      tasks: [...INITIAL_TASKS],
+      reminders: [...INITIAL_REMINDERS],
+      notes: [...INITIAL_NOTES],
+      events: [...INITIAL_EVENTS],
+      timer: { ...INITIAL_TIMER },
+      notifications: [...INITIAL_NOTIFICATIONS],
+      settings: { ...INITIAL_SETTINGS },
     };
   }
 

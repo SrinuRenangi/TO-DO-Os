@@ -64,190 +64,56 @@ class DatabaseManager {
   }
 
   seedDefaultsIfEmpty() {
-    const taskCount = this.db.prepare('SELECT COUNT(*) as count FROM tasks').get().count;
-    if (taskCount === 0) {
-      const today = new Date().toISOString().split('T')[0];
-      const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-      const insertTask = this.db.prepare(`
-        INSERT INTO tasks (id, title, description, priority, status, due_date, due_time, recurring, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      const insertSubtask = this.db.prepare(`
-        INSERT INTO subtasks (id, task_id, title, completed, sort_order, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-
-      const insertReminder = this.db.prepare(`
-        INSERT INTO reminders (id, task_id, title, trigger_time, due_time_formatted, is_triggered, is_snoozed, urgency, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      const insertNote = this.db.prepare(`
-        INSERT INTO notes (id, title, content, pinned, folder, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      const seedTx = this.db.transaction(() => {
-        // Seed Task 1
-        insertTask.run(
-          'task-1',
-          'Buy Medicine & Prescription Refill',
-          'Ensure critical medication is picked up from pharmacy before closing.',
-          'P0',
-          'todo',
-          today,
-          '18:00',
-          'none',
-          now,
-          now
-        );
-        insertSubtask.run('sub-1', 'task-1', 'Check doctor prescription', 1, 0, now);
-        insertSubtask.run('sub-2', 'task-1', 'Pick up at local pharmacy', 0, 1, now);
-
-        // Seed Task 2
-        insertTask.run(
-          'task-2',
-          'System Diagnostics & Background Audit',
-          'Verify background scheduler and offline SQLite WAL storage durability.',
-          'P1',
-          'todo',
-          today,
-          '15:30',
-          'daily',
-          now,
-          now
-        );
-        insertSubtask.run('sub-3', 'task-2', 'Verify system tray daemon', 1, 0, now);
-        insertSubtask.run('sub-4', 'task-2', 'Audit missed reminder reconciliation', 1, 1, now);
-
-        // Seed Task 3
-        insertTask.run(
-          'task-3',
-          'Weekly Knowledge Base Review & Notes Consolidation',
-          'Review pinned technical notes and organize architecture specifications.',
-          'P2',
-          'todo',
-          new Date(Date.now() + 86400000).toISOString().split('T')[0],
-          '11:00',
-          'weekly',
-          now,
-          now
-        );
-
-        // Seed Persistent Daily Tasks (Issue 6)
-        insertTask.run(
-          'task-daily-1',
-          'Learn Java',
-          'Core language study, concurrency, and virtual thread design patterns.',
-          'P1',
-          'todo',
-          today,
-          '08:00',
-          'daily',
-          now,
-          now
-        );
-
-        insertTask.run(
-          'task-daily-2',
-          'Fine Tuning',
-          'Model weight optimization and offline dataset curation.',
-          'P1',
-          'todo',
-          today,
-          '17:00',
-          'daily',
-          now,
-          now
-        );
-
-        // Seed Calendar Events (Distinct from Tasks - Issue 2)
-        const insertEvent = this.db.prepare(`
-          INSERT INTO events (id, title, description, start_time, end_time, is_all_day, category, color, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-
-        insertEvent.run(
-          'event-1',
-          'Doctor Appointment',
-          'Annual health and wellness routine checkup.',
-          `${today}T14:00:00.000Z`,
-          `${today}T15:00:00.000Z`,
-          0,
-          'appointment',
-          '#8B5CF6',
-          now
-        );
-
-        insertEvent.run(
-          'event-2',
-          'Strategic Architecture Sync',
-          'Quarterly engineering milestone review and sync.',
-          `${new Date(Date.now() + 86400000).toISOString().split('T')[0]}T10:00:00.000Z`,
-          `${new Date(Date.now() + 86400000).toISOString().split('T')[0]}T11:30:00.000Z`,
-          0,
-          'meeting',
-          '#6366F1',
-          now
-        );
-
-        // Seed Reminders
-        const remTime1 = new Date(new Date().setHours(18, 0, 0, 0)).toISOString();
-        const remTime2 = new Date(new Date().setHours(15, 30, 0, 0)).toISOString();
-        insertReminder.run('rem-1', 'task-1', 'Buy Medicine & Prescription Refill', remTime1, '6:00 PM', 0, 0, 'critical', now);
-        insertReminder.run('rem-2', 'task-2', 'System Diagnostics & Background Audit', remTime2, '3:30 PM', 0, 0, 'urgent', now);
-
-        // Seed Notes
-        insertNote.run(
-          'note-1',
-          'Personal OS — Core Reliability Principles',
-          '# Personal OS — Core Reliability Principles\n\n1. **Deterministic Execution**: Zero stochastic behavior. Pure mathematical reliability.\n2. **24/7 Desktop Companion**: Runs continuously in background system tray.\n3. **SQLite First**: True SQLite Write-Ahead Logging (WAL).\n4. **Offline First**: All tasks, reminders, notes, and timers function without network access.',
-          1,
-          'Architecture',
-          now,
-          now
-        );
-        insertNote.run(
-          'note-2',
-          'System Telemetry & Performance Limits',
-          '# System Telemetry Targets\n\n- **Idle RAM**: <200MB\n- **Idle CPU**: <2% in background\n- **Startup**: <2s cold boot',
-          0,
-          'Engineering',
-          now,
-          now
-        );
-
-        // Seed Timer
-        this.db.prepare(`
-          INSERT OR REPLACE INTO timer (id, mode, target_seconds, remaining_seconds, is_running, label, updated_at)
-          VALUES ('main-timer', 'pomodoro', 1500, 1500, 0, 'Focus Flow', ?)
-        `).run(now);
-
-        // Seed Notifications
-        this.db.prepare(`
-          INSERT OR REPLACE INTO notifications (id, title, body, urgency, timestamp, is_read)
-          VALUES 
-          ('notif-1', 'SQLite WAL Journal Online', 'Real better-sqlite3 database initialized cleanly with WAL durability.', 'urgent', ?, 0),
-          ('notif-2', 'Desktop Daemon Armed', 'Personal Organizer background companion active with native event scheduler.', 'normal', ?, 0)
-        `).run(new Date(Date.now() - 10 * 60000).toISOString(), new Date(Date.now() - 30 * 60000).toISOString());
-
-        // Seed Settings
-        this.db.prepare(`
-          INSERT OR REPLACE INTO settings (key, value, updated_at)
-          VALUES 
-          ('autoStart', 'true', ?),
-          ('closeToTray', 'true', ?),
-          ('soundEnabled', 'true', ?),
-          ('theme', 'dark', ?)
-        `).run(now, now, now, now);
-      });
-
-      seedTx();
-      console.log('[DatabaseManager] SQLite database seeded with initial baseline.');
+    // Ensure default Timer configuration exists
+    const timerRow = this.db.prepare("SELECT id FROM timer WHERE id = 'main-timer'").get();
+    if (!timerRow) {
+      this.db.prepare(`
+        INSERT OR REPLACE INTO timer (id, mode, target_seconds, remaining_seconds, is_running, label, updated_at)
+        VALUES ('main-timer', 'pomodoro', 1500, 1500, 0, 'Focus Flow', ?)
+      `).run(now);
     }
+
+    // Ensure default Settings exist
+    const settingsCount = this.db.prepare('SELECT COUNT(*) as count FROM settings').get().count;
+    if (settingsCount === 0) {
+      this.db.prepare(`
+        INSERT OR REPLACE INTO settings (key, value, updated_at)
+        VALUES 
+        ('autoStart', 'true', ?),
+        ('closeToTray', 'true', ?),
+        ('soundEnabled', 'true', ?),
+        ('theme', 'dark', ?)
+      `).run(now, now, now, now);
+    }
+    console.log('[DatabaseManager] SQLite database initialized with fresh clean baseline (zero sample data).');
   }
+
+  clearAllUserData() {
+    if (!this.db) return;
+    const clearTx = this.db.transaction(() => {
+      this.db.prepare('DELETE FROM subtasks').run();
+      this.db.prepare('DELETE FROM reminders').run();
+      this.db.prepare('DELETE FROM tasks').run();
+      this.db.prepare('DELETE FROM notes').run();
+      this.db.prepare('DELETE FROM events').run();
+      this.db.prepare('DELETE FROM notifications').run();
+      try {
+        this.db.prepare('DELETE FROM notification_history').run();
+      } catch (_e) {}
+      try {
+        this.db.prepare('DELETE FROM habit_logs').run();
+        this.db.prepare('DELETE FROM habits').run();
+      } catch (_e) {}
+    });
+    clearTx();
+    try {
+      this.db.pragma('incremental_vacuum');
+    } catch (_e) {}
+    console.log('[DatabaseManager] All user data successfully cleared from SQLite database.');
+  }
+
 
   // ==========================================================================
   // Tasks & Subtasks Repository

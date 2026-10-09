@@ -134,7 +134,13 @@ function registerDatabaseIpcHandlers() {
     };
   });
 
-  console.log('[DatabaseIPC] Registered 24 SQLite IPC handlers for main process.');
+  // Purge/Clear all user data
+  ipcMain.handle('db:clearAllUserData', async () => {
+    databaseManager.clearAllUserData();
+    return true;
+  });
+
+  console.log('[DatabaseIPC] Registered 25 SQLite IPC handlers for main process.');
 }
 
 module.exports = { registerDatabaseIpcHandlers };

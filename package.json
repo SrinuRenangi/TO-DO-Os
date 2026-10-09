@@ -12,6 +12,7 @@
     "start": "electron electron-main.cjs",
     "desktop": "electron electron-main.cjs",
     "test": "vitest run",
+    "db:reset": "electron scripts/purge-db.cjs",
     "package": "npm run build && electron-builder --win",
     "package:dir": "npm run build && electron-builder --dir"
   },

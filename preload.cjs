@@ -54,6 +54,9 @@ contextBridge.exposeInMainWorld('sqliteDB', {
 
   // Info
   getInfo: () => ipcRenderer.invoke('db:info'),
+
+  // Purge / Fresh Start
+  clearAllUserData: () => ipcRenderer.invoke('db:clearAllUserData'),
 });
 
 // Desktop Native Windows Notifications Bridge

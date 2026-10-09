@@ -102,9 +102,7 @@ const initialNotes = loadNotes();
 export const useNotesStore = create<NotesState>((set, get) => ({
   notes: initialNotes,
   selectedNoteId: initialNotes[0]?.id || null,
-  scratchpad: `# Fleeting Thoughts & Ideas
-- Personal OS: Review today's schedule and tasks
-- Test SQLite backup snapshot export/restore`,
+  scratchpad: '',
   searchQuery: '',
   selectedFolder: 'All',
   folders: ['All', 'Architecture', 'Engineering', 'Productivity', 'Personal'],
